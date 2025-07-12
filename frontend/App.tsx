@@ -8,10 +8,11 @@ import MealsListScreen from './src/screens/MealsListScreen';
 import MealDetailScreen from './src/screens/MealDetailScreen';
 import AddEditMealScreen from './src/screens/AddEditMealScreen';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { RootStackParamList } from './src/types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const AppNavigator = () => {
+const AppNavigator: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -44,14 +45,16 @@ const AppNavigator = () => {
   );
 };
 
-export default function App() {
+const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppNavigator />
       <StatusBar style="auto" />
     </AuthProvider>
   );
-}
+};
+
+export default App;
 
 const styles = StyleSheet.create({
   loadingContainer: {
@@ -60,4 +63,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
   },
-});
+}); 

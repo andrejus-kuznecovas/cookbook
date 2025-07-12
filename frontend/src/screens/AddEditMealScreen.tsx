@@ -12,20 +12,23 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { mealService } from '../services/api';
+import { MealFormData, ScreenProps } from '../types';
 
-const AddEditMealScreen = ({ route, navigation }) => {
-    const { meal } = route.params || {};
+type AddEditMealScreenProps = ScreenProps<'AddMeal'> | ScreenProps<'EditMeal'>;
+
+const AddEditMealScreen: React.FC<AddEditMealScreenProps> = ({ route, navigation }) => {
+    const meal = 'params' in route && route.params ? (route.params as any).meal : undefined;
     const isEditing = !!meal;
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<MealFormData>({
         name: '',
         ingredients: '',
         recipe: '',
         difficulty: 'Easy',
     });
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState<boolean>(false);
 
-    const difficulties = ['Easy', 'Medium', 'Hard'];
+    const difficulties: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
 
     useEffect(() => {
         if (isEditing && meal) {
@@ -38,14 +41,14 @@ const AddEditMealScreen = ({ route, navigation }) => {
         }
     }, [isEditing, meal]);
 
-    const handleInputChange = (field, value) => {
+    const handleInputChange = (field: keyof MealFormData, value: string): void => {
         setFormData(prev => ({
             ...prev,
             [field]: value,
         }));
     };
 
-    const validateForm = () => {
+    const validateForm = (): boolean => {
         if (!formData.name.trim()) {
             Alert.alert('Error', 'Please enter a meal name');
             return false;
@@ -61,7 +64,7 @@ const AddEditMealScreen = ({ route, navigation }) => {
         return true;
     };
 
-    const handleSave = async () => {
+    const handleSave = async (): Promise<void> => {
         if (!validateForm()) return;
 
         setLoading(true);
@@ -84,7 +87,7 @@ const AddEditMealScreen = ({ route, navigation }) => {
                     ]
                 );
             } else {
-                Alert.alert('Error', result.error);
+                Alert.alert('Error', result.error || `Failed to ${isEditing ? 'update' : 'create'} meal`);
             }
         } catch (error) {
             Alert.alert('Error', `Failed to ${isEditing ? 'update' : 'create'} meal`);
@@ -93,7 +96,7 @@ const AddEditMealScreen = ({ route, navigation }) => {
         }
     };
 
-    const renderDifficultySelector = () => (
+    const renderDifficultySelector = (): React.ReactElement => (
         <View style={styles.difficultyContainer}>
             <Text style={styles.difficultyLabel}>Difficulty:</Text>
             <View style={styles.difficultyButtons}>

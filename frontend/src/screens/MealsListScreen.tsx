@@ -8,25 +8,27 @@ import {
     Alert,
     RefreshControl,
     ActivityIndicator,
+    ListRenderItem,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { mealService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { Meal, ScreenProps } from '../types';
 
-const MealsListScreen = ({ navigation }) => {
-    const [meals, setMeals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+const MealsListScreen: React.FC<ScreenProps<'MealsList'>> = ({ navigation }) => {
+    const [meals, setMeals] = useState<Meal[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
     const { logout } = useAuth();
 
-    const fetchMeals = async () => {
+    const fetchMeals = async (): Promise<void> => {
         try {
             const result = await mealService.getMeals();
 
-            if (result.success) {
+            if (result.success && result.data) {
                 setMeals(result.data);
             } else {
-                Alert.alert('Error', result.error);
+                Alert.alert('Error', result.error || 'Failed to load meals');
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to load meals');
@@ -42,12 +44,12 @@ const MealsListScreen = ({ navigation }) => {
         }, [])
     );
 
-    const handleRefresh = () => {
+    const handleRefresh = (): void => {
         setRefreshing(true);
         fetchMeals();
     };
 
-    const handleLogout = async () => {
+    const handleLogout = async (): Promise<void> => {
         Alert.alert(
             'Logout',
             'Are you sure you want to logout?',
@@ -64,7 +66,7 @@ const MealsListScreen = ({ navigation }) => {
         );
     };
 
-    const renderMealItem = ({ item }) => (
+    const renderMealItem: ListRenderItem<Meal> = ({ item }) => (
         <TouchableOpacity
             style={styles.mealCard}
             onPress={() => navigation.navigate('MealDetail', { meal: item })}
@@ -82,7 +84,7 @@ const MealsListScreen = ({ navigation }) => {
         </TouchableOpacity>
     );
 
-    const renderEmptyState = () => (
+    const renderEmptyState = (): React.ReactElement => (
         <View style={styles.emptyState}>
             <Text style={styles.emptyStateText}>No meals yet!</Text>
             <Text style={styles.emptyStateSubtext}>

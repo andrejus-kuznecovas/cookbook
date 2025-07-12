@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
-const LoginScreen = () => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
+const LoginScreen: React.FC = () => {
+    const [username, setUsername] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
+    const [loading, setLoading] = useState<boolean>(false);
     const { login } = useAuth();
 
-    const handleLogin = async () => {
+    const handleLogin = async (): Promise<void> => {
         if (!username || !password) {
             Alert.alert('Error', 'Please enter both username and password');
             return;
@@ -30,7 +30,7 @@ const LoginScreen = () => {
             const result = await login(username, password);
 
             if (!result.success) {
-                Alert.alert('Login Failed', result.error);
+                Alert.alert('Login Failed', result.error || 'Login failed');
             }
         } catch (error) {
             Alert.alert('Error', 'Something went wrong. Please try again.');

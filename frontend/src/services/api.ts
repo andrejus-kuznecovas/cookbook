@@ -1,5 +1,14 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    ApiResponse,
+    AuthResponse,
+    MealsResponse,
+    MealResponse,
+    User,
+    Meal,
+    MealFormData
+} from '../types';
 
 // Replace with your backend URL
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -46,9 +55,9 @@ api.interceptors.response.use(
 
 // Auth services
 export const authService = {
-    login: async (username, password) => {
+    login: async (username: string, password: string): Promise<ApiResponse<AuthResponse>> => {
         try {
-            const response = await api.post('/auth/login', { username, password });
+            const response: AxiosResponse<AuthResponse> = await api.post('/auth/login', { username, password });
             const { token, user } = response.data;
 
             // Store token and user data
@@ -56,7 +65,7 @@ export const authService = {
             await AsyncStorage.setItem('userData', JSON.stringify(user));
 
             return { success: true, data: response.data };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Login failed'
@@ -64,7 +73,7 @@ export const authService = {
         }
     },
 
-    logout: async () => {
+    logout: async (): Promise<ApiResponse> => {
         try {
             await AsyncStorage.removeItem('userToken');
             await AsyncStorage.removeItem('userData');
@@ -74,7 +83,7 @@ export const authService = {
         }
     },
 
-    getStoredToken: async () => {
+    getStoredToken: async (): Promise<string | null> => {
         try {
             return await AsyncStorage.getItem('userToken');
         } catch (error) {
@@ -82,7 +91,7 @@ export const authService = {
         }
     },
 
-    getStoredUser: async () => {
+    getStoredUser: async (): Promise<User | null> => {
         try {
             const userData = await AsyncStorage.getItem('userData');
             return userData ? JSON.parse(userData) : null;
@@ -94,11 +103,11 @@ export const authService = {
 
 // Meal services
 export const mealService = {
-    getMeals: async () => {
+    getMeals: async (): Promise<ApiResponse<Meal[]>> => {
         try {
-            const response = await api.get('/meals');
+            const response: AxiosResponse<MealsResponse> = await api.get('/meals');
             return { success: true, data: response.data.meals };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to fetch meals'
@@ -106,11 +115,11 @@ export const mealService = {
         }
     },
 
-    getMeal: async (id) => {
+    getMeal: async (id: number): Promise<ApiResponse<Meal>> => {
         try {
-            const response = await api.get(`/meals/${id}`);
+            const response: AxiosResponse<MealResponse> = await api.get(`/meals/${id}`);
             return { success: true, data: response.data.meal };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to fetch meal'
@@ -118,11 +127,11 @@ export const mealService = {
         }
     },
 
-    createMeal: async (mealData) => {
+    createMeal: async (mealData: MealFormData): Promise<ApiResponse<Meal>> => {
         try {
-            const response = await api.post('/meals', mealData);
+            const response: AxiosResponse<MealResponse> = await api.post('/meals', mealData);
             return { success: true, data: response.data.meal };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to create meal'
@@ -130,11 +139,11 @@ export const mealService = {
         }
     },
 
-    updateMeal: async (id, mealData) => {
+    updateMeal: async (id: number, mealData: MealFormData): Promise<ApiResponse<Meal>> => {
         try {
-            const response = await api.put(`/meals/${id}`, mealData);
+            const response: AxiosResponse<MealResponse> = await api.put(`/meals/${id}`, mealData);
             return { success: true, data: response.data.meal };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to update meal'
@@ -142,11 +151,11 @@ export const mealService = {
         }
     },
 
-    deleteMeal: async (id) => {
+    deleteMeal: async (id: number): Promise<ApiResponse> => {
         try {
             await api.delete(`/meals/${id}`);
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to delete meal'

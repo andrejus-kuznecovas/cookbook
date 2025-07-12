@@ -9,16 +9,17 @@ import {
     Share,
 } from 'react-native';
 import { mealService } from '../services/api';
+import { Meal, ScreenProps } from '../types';
 
-const MealDetailScreen = ({ route, navigation }) => {
+const MealDetailScreen: React.FC<ScreenProps<'MealDetail'>> = ({ route, navigation }) => {
     const { meal } = route.params;
-    const [currentMeal, setCurrentMeal] = useState(meal);
+    const [currentMeal, setCurrentMeal] = useState<Meal>(meal);
 
-    const handleEdit = () => {
+    const handleEdit = (): void => {
         navigation.navigate('EditMeal', { meal: currentMeal });
     };
 
-    const handleDelete = () => {
+    const handleDelete = (): void => {
         Alert.alert(
             'Delete Meal',
             'Are you sure you want to delete this meal?',
@@ -33,7 +34,7 @@ const MealDetailScreen = ({ route, navigation }) => {
         );
     };
 
-    const deleteMeal = async () => {
+    const deleteMeal = async (): Promise<void> => {
         try {
             const result = await mealService.deleteMeal(currentMeal.id);
 
@@ -42,14 +43,14 @@ const MealDetailScreen = ({ route, navigation }) => {
                     { text: 'OK', onPress: () => navigation.goBack() }
                 ]);
             } else {
-                Alert.alert('Error', result.error);
+                Alert.alert('Error', result.error || 'Failed to delete meal');
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to delete meal');
         }
     };
 
-    const handleShare = async () => {
+    const handleShare = async (): Promise<void> => {
         try {
             const shareContent = `${currentMeal.name}\n\nIngredients:\n${currentMeal.ingredients}\n\nRecipe:\n${currentMeal.recipe}\n\nDifficulty: ${currentMeal.difficulty}`;
 
