@@ -1,0 +1,30 @@
+You are in an empty repository. 
+Your task is to create a simple multiplatform app that is ready to be deployed to some free hosting and ready to be used by two people on Android, iOS and web.  
+
+The app is called Cookbook and will be used to store meals and their recipes in one place. 
+The first and main features of the app: 
+1. Uploading a meal, which has its recipe. No photos anywhere yet. Meal structure: Name, ingredients, recipe, difficulty. All could be saved in simple text format. 
+2. Opening an app and seeing all uploaded meals, ability to click on any of them to open them and read. 
+3. This app should be accessible only two people and nobody else. The data must be shared and update from one user should be visible to another. No individual data. 
+
+Stack: 
+- Any sort of SQL database, but should be ready to be deployed on free hosting of your choice.
+- Golang for backend 
+- React Native + Expo for multiplatform frontend. 
+- Hosted on  Railway/Render for backend + PostgreSQL, Expo for mobile deployment. Ideally code is deployed on each git commit pushed. 
+- Simple JWT based auth
+
+Guidelines:
+- Always choose simple, understandable and straightforward code. 
+- Always choose the most straightforward and conventional implementation. 
+- Make app visually appealing and modern looking 
+- Constantly add simple unit tests for main flows of the app to check that it works as expected and that nothing else breaks. 
+- Do not commit to a solution blindly. Constantly come back and recheck your assumptions
+- If you cannot do something, do not invent things, but rather stop and ask the user for help or give guidance.
+
+Context;
+- You are developing on a Windows machine. Default terminal is windows console. Choose powershell if needed.
+
+Implementation steps:
+- Prepare an implementation plan, then review it, assure that everything looks correct. 
+- Start implementing the plan and constantly recheck yourself.

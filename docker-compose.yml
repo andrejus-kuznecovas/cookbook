@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cookbook_db
+      POSTGRES_USER: cookbook_user
+      POSTGRES_PASSWORD: cookbook_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cookbook_user -d cookbook_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://cookbook_user:cookbook_password@postgres:5432/cookbook_db?sslmode=disable
+      JWT_SECRET: your-super-secret-jwt-key-for-development
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run main.go
+
+volumes:
+  postgres_data: 
