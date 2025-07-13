@@ -133,7 +133,6 @@ db-shell:
 	@echo "🔍 Opening database shell..."
 	docker-compose exec postgres psql -U cookbook_user -d cookbook_db
 
-# Health check
 health:
 	@echo "🏥 Checking application health..."
 	@echo "Database:"
@@ -142,7 +141,7 @@ health:
 	@curl -f http://localhost:8080/health || echo "❌ Backend not ready"
 	@echo "✅ Health check completed!"
 
-# Show status
+
 status:
 	@echo "📊 Application Status:"
 	@echo "Database:"
