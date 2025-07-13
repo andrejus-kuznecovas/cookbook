@@ -45,7 +45,6 @@ wait-for-db:
 	@echo "⏳ Waiting for database to be ready..."
 	@timeout 30 bash -c 'until docker-compose exec postgres pg_isready -U cookbook_user -d cookbook_db; do sleep 1; done' || true
 
-# Start backend in production mode
 start-backend-prod:
 	@echo "🔧 Starting backend server..."
 	cd backend && \
@@ -54,7 +53,6 @@ start-backend-prod:
 	PORT=8080 \
 	go run main.go &
 
-# Start backend in development mode (with hot reload)
 start-backend-dev:
 	@echo "🔧 Starting backend server in development mode..."
 	cd backend && \
@@ -64,17 +62,14 @@ start-backend-dev:
 	GIN_MODE=debug \
 	go run main.go &
 
-# Start frontend in production mode
 start-frontend-prod:
 	@echo "📱 Starting frontend application..."
 	cd frontend && npm start -- --web &
 
-# Start frontend in development mode
 start-frontend-dev:
 	@echo "📱 Starting frontend application in development mode..."
 	cd frontend && npm start &
 
-# Install all dependencies
 install:
 	@echo "📦 Installing dependencies..."
 	@echo "Installing backend dependencies..."
@@ -83,7 +78,6 @@ install:
 	cd frontend && npm install
 	@echo "✅ All dependencies installed!"
 
-# Run all tests
 test:
 	@echo "🧪 Running tests..."
 	@echo "Running backend tests..."
@@ -92,7 +86,6 @@ test:
 	cd frontend && npm test -- --watchAll=false
 	@echo "✅ All tests completed!"
 
-# Build the application
 build:
 	@echo "🔨 Building application..."
 	@echo "Building backend..."
@@ -101,12 +94,10 @@ build:
 	cd frontend && npm run build
 	@echo "✅ Build completed!"
 
-# Show logs
 logs:
 	@echo "📋 Application logs:"
 	docker-compose logs -f
 
-# Stop all services
 stop:
 	@echo "🛑 Stopping all services..."
 	docker-compose down
@@ -116,18 +107,16 @@ stop:
 	pkill -f "expo start" || true
 	@echo "✅ All services stopped!"
 
-# Clean up everything
 clean: stop
 	@echo "🧹 Cleaning up..."
 	docker-compose down -v
 	docker system prune -f
 	@echo "✅ Cleanup completed!"
 
-# Development shortcuts
 dev: start-dev
 prod: start
 
-# Database shortcuts
+
 db: start-db
 db-shell:
 	@echo "🔍 Opening database shell..."
