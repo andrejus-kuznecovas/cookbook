@@ -28,3 +28,9 @@ Context;
 Implementation steps:
 - Prepare an implementation plan, then review it, assure that everything looks correct. 
 - Start implementing the plan and constantly recheck yourself.
+
+When generating commit messages with cursor.generateGitCommitMessage, keep them concise and brief:
+- Use single line format when possible
+- Maximum 50 characters for subject line
+- Use conventional commit format: type(scope): description
+- Avoid verbose explanations in commit messages
