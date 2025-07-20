@@ -18,7 +18,7 @@ func main() {
 	currentDir, _ := os.Getwd()
 	err := godotenv.Load(filepath.Join(currentDir, ".env"))
 	if err != nil {
-		log.Fatal("Error loading .env file:", err)
+		log.Println("No .env file found, using environment variables")
 	}
 
 	// Connect to database
@@ -35,9 +35,14 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-	// CORS configuration
+	// CORS configuration - allow all origins in production or use environment variable
+	allowedOrigins := []string{"*"} // For production, allow all origins
+	if origins := os.Getenv("ALLOWED_ORIGINS"); origins != "" {
+		allowedOrigins = []string{origins}
+	}
+	
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081"}, // Update before deployment
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
