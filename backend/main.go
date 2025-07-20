@@ -38,9 +38,9 @@ func main() {
 	// Also check if the template is being resolved
 	dbURL := os.Getenv("DATABASE_URL")
 	jwtSecret := os.Getenv("JWT_SECRET")
-	port := os.Getenv("PORT")
+	portDebug := os.Getenv("PORT")
 	log.Println("JWT_SECRET value:", jwtSecret)
-	log.Println("PORT value:", port)
+	log.Println("PORT value:", portDebug)
 	log.Printf("DATABASE_URL value: '%s'", dbURL)
 	log.Println("=== End Debug ===")
 
