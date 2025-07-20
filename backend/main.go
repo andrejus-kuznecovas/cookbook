@@ -21,6 +21,25 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	// Try to load .env file for local development, but don't fail if it doesn't exist
+	err = godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
+	// Debug: Print all environment variables that start with DATABASE
+	log.Println("=== Environment Variables Debug ===")
+	for _, env := range os.Environ() {
+		if len(env) >= 8 && env[:8] == "DATABASE" {
+			log.Printf("Found env var: %s", env)
+		}
+	}
+	
+	// Also check if the template is being resolved
+	dbURL := os.Getenv("DATABASE_URL")
+	log.Printf("DATABASE_URL value: '%s'", dbURL)
+	log.Println("=== End Debug ===")
+
 	// Connect to database
 	if err := database.Connect(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
