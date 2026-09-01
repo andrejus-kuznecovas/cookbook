@@ -1,0 +1,100 @@
+{% extends "meals/base.html" %}
+
+{% block title %}Recipes — Cookbook{% endblock %}
+
+{% block content %}
+<h1>What are we cooking?</h1>
+<p class="subtitle">Pick the meals for the next few days, then get one shopping list.</p>
+
+{% if recipes %}
+<form method="post" id="plan-form">
+  {% csrf_token %}
+  {% for recipe in recipes %}
+  <div class="recipe-card{% if recipe.id in planned_ids %} selected{% endif %}">
+    <label class="recipe-main">
+      <input type="checkbox" name="recipes" value="{{ recipe.id }}"
+             {% if recipe.id in planned_ids %}checked{% endif %}>
+      <span class="check-ring">
+        <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+      </span>
+      <span>
+        <span class="recipe-title">{{ recipe.name }}</span>
+        <span class="recipe-meta">
+          <span class="chip">{{ recipe.ingredients.count }} ingredient{{ recipe.ingredients.count|pluralize }}</span>
+          {% if recipe.servings %}<span class="chip">{{ recipe.servings }} serving{{ recipe.servings|pluralize }}</span>{% endif %}
+        </span>
+      </span>
+    </label>
+    <details>
+      <summary>
+        <svg class="chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+        Ingredients{% if recipe.instructions %} &amp; instructions{% endif %}
+      </summary>
+      <div class="details-body">
+        <ul>
+          {% for ing in recipe.ingredients.all %}
+          <li><span>{{ ing.name }}</span><span class="amount">{{ ing.quantity|floatformat:"-2" }} {{ ing.unit }}</span></li>
+          {% endfor %}
+        </ul>
+        {% if recipe.instructions %}<p class="instructions">{{ recipe.instructions|linebreaksbr }}</p>{% endif %}
+        <p style="margin: 0.7rem 0 0;">
+          <a class="edit-link" href="{% url 'recipe_edit' recipe.pk %}">
+            <svg viewBox="0 0 24 24"><path d="M17 3l4 4L8 20H4v-4L17 3z"/></svg>
+            Edit recipe
+          </a>
+        </p>
+      </div>
+    </details>
+  </div>
+  {% endfor %}
+
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      <span class="selected-count" id="selected-count"></span>
+      <button type="submit" class="btn-ghost">Save</button>
+      <button type="submit" name="show_list" value="1" class="btn-primary" id="show-list-btn">
+        Shopping list
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+  </div>
+</form>
+{% else %}
+<div class="empty">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 11h16v2a7 7 0 0 1-7 7h-2a7 7 0 0 1-7-7v-2z"/>
+    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+  </svg>
+  <p>No recipes yet. Add your first one to get started.</p>
+  <a class="btn btn-primary" href="{% url 'recipe_new' %}">Add a recipe</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if recipes %}
+<script>
+  const form = document.getElementById("plan-form");
+  const boxes = form.querySelectorAll('input[name="recipes"]');
+  const countEl = document.getElementById("selected-count");
+  const showBtn = document.getElementById("show-list-btn");
+
+  function refresh() {
+    let n = 0;
+    boxes.forEach((box) => {
+      box.closest(".recipe-card").classList.toggle("selected", box.checked);
+      if (box.checked) n++;
+    });
+    countEl.innerHTML = n
+      ? "<strong>" + n + "</strong> meal" + (n === 1 ? "" : "s") + " selected"
+      : "Nothing selected";
+    showBtn.disabled = n === 0;
+  }
+
+  boxes.forEach((box) => box.addEventListener("change", refresh));
+  // Changing the plan invalidates previous in-store check-offs.
+  form.addEventListener("submit", () => localStorage.removeItem("cookbook-checked"));
+  refresh();
+</script>
+{% endif %}
+{% endblock %}

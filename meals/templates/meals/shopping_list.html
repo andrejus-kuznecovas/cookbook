@@ -1,0 +1,91 @@
+{% extends "meals/base.html" %}
+
+{% block title %}Shopping list — Cookbook{% endblock %}
+
+{% block content %}
+<h1>Shopping list</h1>
+
+{% if lines %}
+<p class="subtitle">
+  For {% for r in planned_recipes %}<strong>{{ r.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+</p>
+
+<p class="progress-note" id="progress-note"></p>
+
+<div class="shop-card" id="shop-card">
+  {% for line in lines %}
+  <label class="shop-item" data-key="{{ line.name|lower }}|{{ line.unit }}">
+    <input type="checkbox">
+    <span class="check-ring">
+      <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+    </span>
+    <span class="item-text">
+      <span class="item-name">{{ line.name }}</span>
+      <div class="item-recipes">{{ line.recipes|join:", " }}</div>
+    </span>
+    <span class="qty-badge">{{ line.display_quantity }}</span>
+  </label>
+  {% endfor %}
+</div>
+
+<div class="actionbar">
+  <div class="actionbar-inner">
+    <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Back</a>
+    <span style="flex:1"></span>
+    <form method="post" action="{% url 'clear_plan' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-ghost">Clear plan</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="empty">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
+    <path d="M3 4h2l2.6 12.4a1 1 0 0 0 1 .6h8.9a1 1 0 0 0 1-.7L21 8H6"/>
+  </svg>
+  <p>No meals selected yet. Pick some recipes first.</p>
+  <a class="btn btn-primary" href="{% url 'recipe_list' %}">Pick recipes</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if lines %}
+<script>
+  const STORAGE_KEY = "cookbook-checked";
+  const items = document.querySelectorAll(".shop-item");
+  const note = document.getElementById("progress-note");
+
+  function loadChecked() {
+    try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []); }
+    catch { return new Set(); }
+  }
+
+  const checked = loadChecked();
+
+  function refresh() {
+    let done = 0;
+    items.forEach((item) => {
+      const isDone = item.querySelector("input").checked;
+      item.classList.toggle("done", isDone);
+      if (isDone) done++;
+    });
+    note.textContent = done === items.length
+      ? "All done, enjoy the cooking!"
+      : done + " of " + items.length + " picked up";
+  }
+
+  items.forEach((item) => {
+    const box = item.querySelector("input");
+    box.checked = checked.has(item.dataset.key);
+    box.addEventListener("change", () => {
+      box.checked ? checked.add(item.dataset.key) : checked.delete(item.dataset.key);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...checked]));
+      refresh();
+    });
+  });
+  refresh();
+</script>
+{% endif %}
+{% endblock %}

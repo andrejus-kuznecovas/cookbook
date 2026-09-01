@@ -1,0 +1,110 @@
+{% extends "meals/base.html" %}
+
+{% block title %}{% if recipe %}Edit {{ recipe.name }}{% else %}New recipe{% endif %} — Cookbook{% endblock %}
+
+{% block content %}
+<h1>{% if recipe %}Edit recipe{% else %}New recipe{% endif %}</h1>
+<p class="subtitle">{% if recipe %}Change anything and save.{% else %}Name it, list the ingredients, done.{% endif %}</p>
+
+{% if errors %}
+<div class="error-banner">
+  <ul>
+    {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<form method="post" id="recipe-form">
+  {% csrf_token %}
+  <div class="form-card">
+    <div class="field">
+      <label for="id-name">Name</label>
+      <input type="text" id="id-name" name="name" value="{{ form.name }}" placeholder="e.g. Spaghetti Carbonara" autocomplete="off" required>
+    </div>
+    <div class="field" style="max-width: 9rem;">
+      <label for="id-servings">Servings</label>
+      <input type="number" id="id-servings" name="servings" value="{{ form.servings }}" min="1" placeholder="2">
+    </div>
+
+    <div class="field">
+      <label>Ingredients</label>
+      <div id="ing-rows">
+        {% for row in rows %}
+        <div class="ing-row">
+          <input type="text" name="ing_name" value="{{ row.name }}" placeholder="Ingredient" autocomplete="off">
+          <input type="text" name="ing_qty" value="{{ row.qty }}" placeholder="Qty" inputmode="decimal" autocomplete="off">
+          <select name="ing_unit">
+            <option value="" {% if not row.unit %}selected{% endif %} disabled>unit</option>
+            {% for unit in units %}
+            <option value="{{ unit }}" {% if row.unit == unit %}selected{% endif %}>{{ unit }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="remove-row" aria-label="Remove ingredient">&times;</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="add-row-btn" id="add-row">+ Add ingredient</button>
+    </div>
+
+    <div class="field" style="margin-bottom: 0;">
+      <label for="id-instructions">Instructions <span style="text-transform: none; font-weight: 500;">(optional)</span></label>
+      <textarea id="id-instructions" name="instructions" placeholder="How to cook it...">{{ form.instructions }}</textarea>
+    </div>
+  </div>
+
+  <div class="actionbar">
+    <div class="actionbar-inner">
+      {% if recipe %}
+      <button type="submit" form="delete-form" class="btn-danger"
+              onclick="return confirm('Delete “{{ recipe.name }}”? This cannot be undone.')">Delete</button>
+      {% endif %}
+      <span style="flex:1"></span>
+      <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Cancel</a>
+      <button type="submit" class="btn-primary">Save recipe</button>
+    </div>
+  </div>
+</form>
+
+{% if recipe %}
+<form method="post" action="{% url 'recipe_delete' recipe.pk %}" id="delete-form">
+  {% csrf_token %}
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const rowsBox = document.getElementById("ing-rows");
+  const rowTemplate = rowsBox.querySelector(".ing-row").cloneNode(true);
+  rowTemplate.querySelectorAll("input").forEach((el) => (el.value = ""));
+  rowTemplate.querySelector("select").selectedIndex = 0;
+
+  function addRow() {
+    const row = rowTemplate.cloneNode(true);
+    rowsBox.appendChild(row);
+    row.querySelector('input[name="ing_name"]').focus();
+  }
+
+  rowsBox.addEventListener("click", (e) => {
+    const btn = e.target.closest(".remove-row");
+    if (!btn) return;
+    if (rowsBox.children.length > 1) {
+      btn.closest(".ing-row").remove();
+    } else {
+      const row = btn.closest(".ing-row");
+      row.querySelectorAll("input").forEach((el) => (el.value = ""));
+      row.querySelector("select").selectedIndex = 0;
+    }
+  });
+
+  document.getElementById("add-row").addEventListener("click", addRow);
+
+  // Pressing Enter in the qty field adds a new row instead of submitting.
+  rowsBox.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.name === "ing_qty") {
+      e.preventDefault();
+      addRow();
+    }
+  });
+</script>
+{% endblock %}
