@@ -205,6 +205,69 @@
     .details-body li .amount { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .instructions { color: var(--muted); font-size: 0.9rem; margin: 0.4rem 0 0; }
 
+    /* ---------- Week calendar ---------- */
+    .week-cal {
+      background: var(--surface);
+      border: none;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .week-cal summary {
+      padding: 0.65rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .week-cal summary .cal-icon { width: 16px; height: 16px; stroke: var(--accent); stroke-width: 2; fill: none; }
+    .week-cal summary .range { color: var(--muted); font-weight: 600; }
+    .week-cal summary .chev { margin-left: auto; }
+    .week-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.35rem;
+      padding: 0 0.8rem 0.8rem;
+    }
+    .day-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.05rem;
+      padding: 0.45rem 0.1rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      font: inherit;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .day-pill .dow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+    .day-pill .dom { font-size: 1.02rem; font-weight: 700; }
+    .day-pill.today { border-color: var(--accent); }
+    .day-pill.today .dow { color: var(--accent-dark); }
+    .day-pill.marked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .day-pill.marked .dow, .day-pill.marked .dom { color: white; }
+    .cal-hint {
+      padding: 0 1rem 0.7rem;
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
     /* ---------- Sticky action bar ---------- */
     .actionbar {
       position: fixed;

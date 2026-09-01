@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,10 +22,12 @@ def recipe_list(request):
 
     recipes = Recipe.objects.prefetch_related("ingredients").all()
     planned_ids = set(PlanEntry.objects.values_list("recipe_id", flat=True))
+    today = date.today()
+    week = [today + timedelta(days=i) for i in range(7)]
     return render(
         request,
         "meals/recipe_list.html",
-        {"recipes": recipes, "planned_ids": planned_ids},
+        {"recipes": recipes, "planned_ids": planned_ids, "week": week},
     )
 
 
