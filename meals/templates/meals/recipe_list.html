@@ -2,6 +2,8 @@
 
 {% block title %}Recipes — Cookbook{% endblock %}
 
+{% block body_class %}page-recipes{% endblock %}
+
 {% block content %}
 <h1>What are we cooking?</h1>
 <p class="subtitle">Pick the meals for the next few days, then get one shopping list.</p>
@@ -9,6 +11,7 @@
 {% if recipes %}
 <form method="post" id="plan-form">
   {% csrf_token %}
+  <div class="recipe-grid">
   {% for recipe in recipes %}
   <div class="recipe-card{% if recipe.id in planned_ids %} selected{% endif %}">
     <label class="recipe-main">
@@ -17,12 +20,10 @@
       <span class="check-ring">
         <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
       </span>
-      <span>
+      <span class="recipe-info">
         <span class="recipe-title">{{ recipe.name }}</span>
-        <span class="recipe-meta">
-          <span class="chip">{{ recipe.ingredients.count }} ingredient{{ recipe.ingredients.count|pluralize }}</span>
-          {% if recipe.servings %}<span class="chip">{{ recipe.servings }} serving{{ recipe.servings|pluralize }}</span>{% endif %}
-        </span>
+        <span class="chip">{{ recipe.ingredients.count }} ingredient{{ recipe.ingredients.count|pluralize }}</span>
+        {% if recipe.servings %}<span class="chip">{{ recipe.servings }} serving{{ recipe.servings|pluralize }}</span>{% endif %}
       </span>
     </label>
     <details>
@@ -47,6 +48,7 @@
     </details>
   </div>
   {% endfor %}
+  </div>
 
   <div class="actionbar">
     <div class="actionbar-inner">
