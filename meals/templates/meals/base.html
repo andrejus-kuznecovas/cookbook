@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f97316">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f97316">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1c1917">
   <link rel="manifest" href="{% static 'meals/manifest.webmanifest' %}">
   <link rel="apple-touch-icon" href="{% static 'meals/icons/apple-touch-icon.png' %}">
   <title>{% block title %}Cookbook{% endblock %}</title>
   <style>
     :root {
+      color-scheme: light dark;
       --accent: #f97316;
       --accent-dark: #c2410c;
       --accent-soft: #fff7ed;
@@ -507,6 +509,52 @@
     }
     .empty svg { width: 52px; height: 52px; stroke: var(--accent); margin-bottom: 0.6rem; }
     .empty p { margin: 0 0 1.2rem; color: var(--muted); font-weight: 500; }
+
+    /* ---------- Dark mode ---------- */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --accent: #f97316;
+        --accent-dark: #fdba74;
+        --accent-soft: #3b2514;
+        --accent-border: #9a3412;
+        --bg: #1c1917;
+        --surface: #292524;
+        --text: #f5f5f4;
+        --muted: #a8a29e;
+        --border: #44403c;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.30);
+        --shadow-lift: 0 4px 10px rgba(0, 0, 0, 0.40), 0 12px 28px rgba(0, 0, 0, 0.45);
+      }
+      /* Hardcoded colors audited for dark. */
+      header { background: rgba(28, 25, 23, 0.88); }
+      .actionbar { background: rgba(28, 25, 23, 0.92); }
+      .check-ring {
+        border-color: #57534e;
+        background: var(--surface);
+      }
+      .recipe-card.selected .check-ring {
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+      .recipe-card.selected .chip { background: var(--bg); }
+      .btn-ghost:hover { border-color: #57534e; }
+      input:focus, textarea:focus, select:focus { background: var(--surface); }
+      .ing-row .remove-row:hover { color: #f87171; background: #3b1d1d; }
+      .error-banner {
+        background: #2d1515;
+        border-color: #7f1d1d;
+        color: #fca5a5;
+      }
+      .btn-danger {
+        color: #f87171;
+        border-color: #7f1d1d;
+      }
+      .btn-danger:hover { background: #3b1d1d; }
+      .toast {
+        background: #163a26;
+        color: #86efac;
+      }
+    }
   </style>
 </head>
 <body class="{% block body_class %}{% endblock %}">
