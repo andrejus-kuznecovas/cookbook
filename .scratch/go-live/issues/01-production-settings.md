@@ -7,10 +7,10 @@ working `runserver` out of the box.
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` are read from environment variables in `config/settings.py`, with the current dev values as defaults (`DEBUG` defaults to true; env value "False"/"0" disables it)
-- [ ] WhiteNoise is added (requirements + middleware) and `STATIC_ROOT` is configured; `python manage.py collectstatic --noinput` completes cleanly
-- [ ] With `DEBUG=False` and `ALLOWED_HOSTS` set, `python manage.py check --deploy` reports no SECRET_KEY/DEBUG errors
-- [ ] Tests cover the env-var override behavior
-- [ ] Existing 14 tests still pass
+- [x] `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` are read from environment variables in `config/settings.py`, with the current dev values as defaults (`DEBUG` defaults to true; env value "False"/"0" disables it)
+- [x] WhiteNoise is added (requirements + middleware) and `STATIC_ROOT` is configured; `python manage.py collectstatic --noinput` completes cleanly
+- [x] With `DEBUG=False` and `ALLOWED_HOSTS` set, `python manage.py check --deploy` reports no SECRET_KEY/DEBUG errors
+- [x] Tests cover the env-var override behavior
+- [x] Existing 14 tests still pass
