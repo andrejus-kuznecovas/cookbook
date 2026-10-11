@@ -32,6 +32,14 @@ Not linked to specific Recipes. Avoid: "marked day", "day mark".
 The aggregated ingredient lines computed from the Meal Plan's Recipes.
 Derived, never stored.
 
+## Extra
+
+An off-plan shared shopping line: a free-form item added directly on the
+Shopping List that is not part of any Recipe ("dish soap", "coffee beans").
+Stored in the database and shared by both users; removed individually or
+wiped together with the Meal Plan by Clear plan. Avoid: "custom item",
+"ad-hoc item".
+
 ## Stacking
 
 Combining Ingredient quantities of the same normalized name and compatible

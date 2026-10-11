@@ -56,6 +56,23 @@ class CookingDay(models.Model):
         return f"Cooking day: {self.date.isoformat()}"
 
 
+class Extra(models.Model):
+    """An off-plan shared shopping line added directly on the Shopping List.
+
+    Free text only, not part of any Recipe. Shared by both users; wiped
+    together with the Meal Plan by Clear plan.
+    """
+
+    name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return self.name
+
+
 class PlanEntry(models.Model):
     """A recipe currently selected in the shared meal plan."""
 

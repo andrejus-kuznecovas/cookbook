@@ -8,7 +8,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .aggregation import aggregate
-from .models import CookingDay, Ingredient, Recipe
+from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe
 
 
 class AggregationTests(SimpleTestCase):
@@ -119,6 +119,8 @@ class AuthTests(TestCase):
             (reverse("recipe_edit", args=[self.recipe.pk]), ["get", "post"]),
             (reverse("recipe_delete", args=[self.recipe.pk]), ["get", "post"]),
             (reverse("shopping_list"), ["get", "post"]),
+            (reverse("add_extra"), ["get", "post"]),
+            (reverse("remove_extra", args=[1]), ["get", "post"]),
             (reverse("clear_plan"), ["get", "post"]),
             (reverse("toggle_cooking_day"), ["get", "post"]),
         ]
@@ -309,6 +311,62 @@ class PlanningPageSearchTests(TestCase):
         response = self.client.get(reverse("recipe_list"))
         self.assertNotContains(response, 'id="recipe-search"')
         self.assertNotContains(response, 'id="surprise-btn"')
+
+
+class ExtraTests(TestCase):
+    """Extras: off-plan shared shopping lines (see GLOSSARY.md)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_add_extra_and_redirect_back(self):
+        response = self.client.post(reverse("add_extra"), {"name": "Dish soap"})
+        self.assertRedirects(response, reverse("shopping_list"))
+        self.assertEqual(
+            list(Extra.objects.values_list("name", flat=True)), ["Dish soap"]
+        )
+
+    def test_add_strips_surrounding_whitespace(self):
+        self.client.post(reverse("add_extra"), {"name": "  Coffee beans  "})
+        self.assertEqual(Extra.objects.get().name, "Coffee beans")
+
+    def test_add_rejects_empty_and_whitespace_names_silently(self):
+        for name in ("", "   "):
+            with self.subTest(name=repr(name)):
+                response = self.client.post(reverse("add_extra"), {"name": name})
+                self.assertRedirects(response, reverse("shopping_list"))
+        self.assertEqual(Extra.objects.count(), 0)
+
+    def test_remove_extra(self):
+        extra = Extra.objects.create(name="Coffee beans")
+        response = self.client.post(reverse("remove_extra", args=[extra.pk]))
+        self.assertRedirects(response, reverse("shopping_list"))
+        self.assertEqual(Extra.objects.count(), 0)
+
+    def test_clear_plan_wipes_extras(self):
+        recipe = Recipe.objects.create(name="Soup")
+        PlanEntry.objects.create(recipe=recipe)
+        Extra.objects.create(name="Dish soap")
+        response = self.client.post(reverse("clear_plan"))
+        self.assertRedirects(response, reverse("recipe_list"))
+        self.assertEqual(PlanEntry.objects.count(), 0)
+        self.assertEqual(Extra.objects.count(), 0)
+
+    def test_extras_visible_to_another_authenticated_user(self):
+        extra = Extra.objects.create(name="Dish soap")
+        other = User.objects.create_user("other-partner", password="test-pass-456")
+        self.client.force_login(other)
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, "Dish soap")
+        self.assertContains(response, f'data-key="extra|{extra.pk}"')
+
+    def test_extras_section_and_form_show_without_planned_meals(self):
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, "Extras")
+        self.assertContains(response, f'action="{reverse("add_extra")}"')
+        # The empty state still appears when no meals are selected.
+        self.assertContains(response, "No meals selected yet")
 
 
 class PwaTests(TestCase):

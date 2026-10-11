@@ -28,16 +28,6 @@
   {% endfor %}
 </div>
 
-<div class="actionbar">
-  <div class="actionbar-inner">
-    <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Back</a>
-    <span style="flex:1"></span>
-    <form method="post" action="{% url 'clear_plan' %}">
-      {% csrf_token %}
-      <button type="submit" class="btn-ghost">Clear plan</button>
-    </form>
-  </div>
-</div>
 {% else %}
 <div class="empty">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -48,10 +38,51 @@
   <a class="btn btn-primary" href="{% url 'recipe_list' %}">Pick recipes</a>
 </div>
 {% endif %}
+
+<h2 class="extras-heading">Extras</h2>
+{% if extras %}
+<div class="shop-card" id="extras-card">
+  {% for extra in extras %}
+  <div class="shop-item" data-key="extra|{{ extra.pk }}">
+    <label class="extra-label">
+      <input type="checkbox">
+      <span class="check-ring">
+        <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+      </span>
+      <span class="item-text">
+        <span class="item-name">{{ extra.name }}</span>
+      </span>
+    </label>
+    <form method="post" action="{% url 'remove_extra' extra.pk %}" class="extra-remove">
+      {% csrf_token %}
+      <button type="submit" aria-label="Remove {{ extra.name }}">&times;</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<form method="post" action="{% url 'add_extra' %}" class="extra-add-form">
+  {% csrf_token %}
+  <input type="text" name="name" maxlength="200" placeholder="Add an extra (dish soap, coffee beans…)" aria-label="Extra item name">
+  <button type="submit" class="btn-ghost">Add</button>
+</form>
+
+{% if lines %}
+<div class="actionbar">
+  <div class="actionbar-inner">
+    <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Back</a>
+    <span style="flex:1"></span>
+    <form method="post" action="{% url 'clear_plan' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn-ghost">Clear plan</button>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-{% if lines %}
+{% if lines or extras %}
 <script>
   const STORAGE_KEY = "cookbook-checked";
   const items = document.querySelectorAll(".shop-item");
@@ -71,9 +102,11 @@
       item.classList.toggle("done", isDone);
       if (isDone) done++;
     });
-    note.textContent = done === items.length
-      ? "All done, enjoy the cooking!"
-      : done + " of " + items.length + " picked up";
+    if (note) {
+      note.textContent = done === items.length
+        ? "All done, enjoy the cooking!"
+        : done + " of " + items.length + " picked up";
+    }
   }
 
   items.forEach((item) => {

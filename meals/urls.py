@@ -8,6 +8,12 @@ urlpatterns = [
     path("recipes/<int:pk>/edit/", views.recipe_form, name="recipe_edit"),
     path("recipes/<int:pk>/delete/", views.recipe_delete, name="recipe_delete"),
     path("shopping-list/", views.shopping_list, name="shopping_list"),
+    path("shopping-list/extras/add/", views.add_extra, name="add_extra"),
+    path(
+        "shopping-list/extras/<int:pk>/remove/",
+        views.remove_extra,
+        name="remove_extra",
+    ),
     path("clear-plan/", views.clear_plan, name="clear_plan"),
     path(
         "cooking-days/toggle/",
