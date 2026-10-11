@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -9,6 +10,7 @@ from .aggregation import aggregate
 from .models import Ingredient, PlanEntry, Recipe, Unit
 
 
+@login_required
 def recipe_list(request):
     if request.method == "POST":
         selected_ids = request.POST.getlist("recipes")
@@ -89,6 +91,7 @@ def _parse_recipe_form(post):
     return data, rows, errors
 
 
+@login_required
 def recipe_form(request, pk=None):
     recipe = get_object_or_404(Recipe, pk=pk) if pk else None
 
@@ -148,6 +151,7 @@ def recipe_form(request, pk=None):
     )
 
 
+@login_required
 @require_POST
 def recipe_delete(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
@@ -157,6 +161,7 @@ def recipe_delete(request, pk):
     return redirect("recipe_list")
 
 
+@login_required
 def shopping_list(request):
     planned_recipes = Recipe.objects.filter(plan_entry__isnull=False)
     ingredients = Ingredient.objects.filter(
@@ -169,6 +174,7 @@ def shopping_list(request):
     )
 
 
+@login_required
 @require_POST
 def clear_plan(request):
     PlanEntry.objects.all().delete()

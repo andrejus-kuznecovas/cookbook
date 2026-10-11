@@ -35,6 +35,13 @@ user `admin` / password `cookbook`; change it or create your own).
 
 On macOS/Linux replace `.\.venv\Scripts\` with `.venv/bin/`.
 
+## Accounts
+
+Every page requires a login (`/accounts/login/`). There is no self-signup:
+create the two partner accounts with `manage.py createsuperuser`, or add
+regular users via the Django admin (`/admin` → Users → Add). Log out with
+the "Log out" control in the header.
+
 ## Tests
 
 ```powershell

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -96,7 +97,58 @@ class AggregationTests(SimpleTestCase):
         self.assertEqual(lines[0].quantity, 3)
 
 
+class AuthTests(TestCase):
+    """Every meals URL requires login; login and logout flows work."""
+
+    LOGIN_URL = "/accounts/login/"
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.recipe = Recipe.objects.create(name="Soup")
+
+    def anonymous_urls(self):
+        """Every URL in meals/urls.py with the methods it accepts."""
+        return [
+            (reverse("recipe_list"), ["get", "post"]),
+            (reverse("recipe_new"), ["get", "post"]),
+            (reverse("recipe_edit", args=[self.recipe.pk]), ["get", "post"]),
+            (reverse("recipe_delete", args=[self.recipe.pk]), ["get", "post"]),
+            (reverse("shopping_list"), ["get", "post"]),
+            (reverse("clear_plan"), ["get", "post"]),
+        ]
+
+    def test_anonymous_requests_redirect_to_login_with_next(self):
+        for path, methods in self.anonymous_urls():
+            for method in methods:
+                with self.subTest(path=path, method=method):
+                    response = getattr(self.client, method)(path)
+                    self.assertRedirects(
+                        response, f"{self.LOGIN_URL}?next={path}"
+                    )
+
+    def test_login_page_renders_for_anonymous(self):
+        response = self.client.get(self.LOGIN_URL)
+        self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_planning_page_returns_200(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("recipe_list"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_logout_post_logs_out_and_redirects_to_login(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("logout"))
+        self.assertRedirects(response, self.LOGIN_URL)
+        # The session is gone: the planning page redirects to login again.
+        response = self.client.get(reverse("recipe_list"))
+        self.assertRedirects(response, f"{self.LOGIN_URL}?next=/")
+
+
 class RecipeFormViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
     def test_create_recipe(self):
         response = self.client.post(
             reverse("recipe_new"),
