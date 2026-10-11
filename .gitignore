@@ -9,3 +9,4 @@ staticfiles/
 *.architecture.json
 *-architecture.html
 *.visual-check.json
+docs/diagrams/*.html

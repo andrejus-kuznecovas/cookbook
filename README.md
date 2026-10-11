@@ -4,6 +4,15 @@ A small Django app for two people to store recipes, pick meals for the next
 few days, and get one combined shopping list where shared ingredients stack
 (200 g + 300 g butter = 500 g butter, 1 kg + 300 g flour = 1.3 kg flour).
 
+## Architecture
+
+![Cookbook architecture](docs/architecture.jpg)
+
+Both phones use one login-protected URL on PythonAnywhere; Django keeps the
+shared state in a single SQLite file, and every push to `main` is tested by
+GitHub Actions and auto-deployed. The diagram source lives at
+`docs/diagrams/cookbook.archify.json` (regenerate with the `archify` skill).
+
 ## How it works
 
 - **Add / edit recipes** in the app itself (`/recipes/new/`, or "Edit recipe"

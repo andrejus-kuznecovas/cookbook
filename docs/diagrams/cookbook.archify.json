@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Cookbook Architecture",
+    "output": "cookbook-diagram.html",
+    "quality_profile": "showcase",
+    "viewBox": [1220, 660]
+  },
+  "components": [
+    { "id": "laptop", "type": "external", "label": "Laptop", "sublabel": "Cursor + git", "pos": [50, 90], "size": [150, 62] },
+    { "id": "github", "type": "external", "label": "GitHub", "sublabel": "main branch", "pos": [330, 90], "size": [150, 62] },
+    { "id": "actions", "type": "cloud", "label": "GitHub Actions", "sublabel": "CI: 48 tests", "pos": [610, 90], "size": [160, 62] },
+    { "id": "phones", "type": "frontend", "label": "Two phones", "sublabel": "Android + iPhone, PWA", "pos": [50, 330], "size": [150, 64] },
+    { "id": "django", "type": "backend", "label": "Django 6 app", "sublabel": "recipes, Meal Plan, Cooking Days", "tag": "login required", "pos": [610, 330], "size": [180, 66] },
+    { "id": "sqlite", "type": "database", "label": "SQLite", "sublabel": "db.sqlite3, persistent disk", "pos": [950, 330], "size": [170, 64] },
+    { "id": "static", "type": "cloud", "label": "Static files", "sublabel": "WhiteNoise, /static/ mapping", "pos": [610, 500], "size": [180, 62] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "PythonAnywhere free tier: ankuzcookbook.pythonanywhere.com", "wraps": ["django", "sqlite", "static"] }
+  ],
+  "connections": [
+    { "id": "push", "from": "laptop", "to": "github", "label": "git push" },
+    { "id": "trigger", "from": "github", "to": "actions", "label": "triggers CI" },
+    { "id": "deploy", "from": "actions", "to": "django", "label": "auto-deploy: pull, migrate, reload", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "browse", "from": "phones", "to": "django", "label": "HTTPS, shared login", "variant": "emphasis" },
+    { "id": "orm", "from": "django", "to": "sqlite", "label": "ORM" },
+    { "id": "assets", "from": "phones", "to": "static", "label": "CSS, icons, manifest", "variant": "dashed", "fromSide": "bottom", "toSide": "left" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Daily use", "items": ["One URL for both partners, installable to the home screen", "Shared Meal Plan, Cooking Days, and shopping Extras"] },
+    { "dot": "emerald", "title": "Ship loop", "items": ["Push to main, 48 tests gate the deploy", "Live in about 2 minutes, no manual steps"] },
+    { "dot": "rose", "title": "Data", "items": ["One SQLite file on persistent disk (ADR-0002)", "Backup = download db.sqlite3"] }
+  ]
+}
