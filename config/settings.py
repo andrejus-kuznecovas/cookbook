@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -151,6 +152,14 @@ STORAGES = {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
+
+# The manifest storage needs `collectstatic` output, which tests don't
+# have (and shouldn't need): {% static %} would raise "Missing staticfiles
+# manifest entry". Serve unhashed paths in tests instead.
+if 'test' in sys.argv:
+    STORAGES['staticfiles']['BACKEND'] = (
+        'django.contrib.staticfiles.storage.StaticFilesStorage'
+    )
 
 
 # Authentication
