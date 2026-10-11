@@ -4,3 +4,8 @@ __pycache__/
 db.sqlite3
 staticfiles/
 .DS_Store
+
+# Generated diagram artifacts (archify / diagram-design outputs)
+*.architecture.json
+*-architecture.html
+*.visual-check.json
