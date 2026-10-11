@@ -1,1 +1,2 @@
 django>=6.1,<7
+whitenoise>=6.12,<7
