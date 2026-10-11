@@ -64,16 +64,8 @@ meals/
 seed.py            optional example data
 ```
 
-## Deploying later (one shared URL for both phones)
+## Deploying (one shared URL for both phones)
 
-Not set up yet, but the app is ready for it:
-
-1. Host on a free tier that keeps a persistent disk for `db.sqlite3` —
-   **PythonAnywhere** (built for Django, no card required) or **Render**.
-2. Before going public, set in `config/settings.py`: `DEBUG = False`,
-   a secret `SECRET_KEY` from an env var, and your domain in `ALLOWED_HOSTS`;
-   protect the pages with Django's built-in login (`login_required` on the
-   views) and create one account per person.
-3. On both phones, open the URL in the browser and use "Add to Home Screen"
-   for an app-like icon. An Android APK is possible later by wrapping the
-   deployed URL in a Trusted Web Activity, but is not required.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the step-by-step PythonAnywhere
+runbook: from account signup to a live, login-protected app, plus how to
+update it and back up the database.

@@ -164,8 +164,13 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# The app sends no email. The console backend is a development convenience
+# only; it is skipped in production (DEBUG=False) because `manage.py check
+# --deploy` rejects it as development-only (mail.E001). Without an override,
+# Django falls back to its default SMTP backend, which is never used.
+if DEBUG:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }
