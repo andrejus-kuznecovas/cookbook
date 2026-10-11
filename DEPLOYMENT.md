@@ -155,7 +155,17 @@ Commands shown in `bash` blocks run in a PythonAnywhere **Bash console**
 
 ## Updating the app
 
-After new commits land on `main`:
+**Automatic (the normal path):** every push to `main` runs CI, and when
+the tests pass, the `deploy` job in `.github/workflows/ci.yml` updates
+PythonAnywhere automatically: it runs `git pull`, `pip install`,
+`migrate`, and `collectstatic` in the deploy console via the
+PythonAnywhere API, reloads the web app, and smoke-checks the login
+page. It needs the `PA_API_TOKEN` repository secret and an existing
+started bash console (id in the workflow). If the deploy job ever fails
+with "console is not running" (can happen after PythonAnywhere server
+maintenance), open the console once in a browser and re-run the job.
+
+**Manual (fallback):** after new commits land on `main`:
 
 ```bash
 workon cookbook
