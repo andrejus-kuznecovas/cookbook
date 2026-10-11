@@ -41,6 +41,21 @@ class Ingredient(models.Model):
         return f"{self.name} ({self.quantity} {self.unit})"
 
 
+class CookingDay(models.Model):
+    """A day in the Rolling Week the couple marked as a day they cook.
+
+    Shared by both users; not linked to specific Recipes.
+    """
+
+    date = models.DateField(unique=True)
+
+    class Meta:
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"Cooking day: {self.date.isoformat()}"
+
+
 class PlanEntry(models.Model):
     """A recipe currently selected in the shared meal plan."""
 

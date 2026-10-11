@@ -17,7 +17,7 @@
   </summary>
   <div class="week-days">
     {% for day in week %}
-    <button type="button" class="day-pill{% if forloop.first %} today{% endif %}" data-key="{{ day.isoformat }}">
+    <button type="button" class="day-pill{% if forloop.first %} today{% endif %}{% if day in marked_days %} marked{% endif %}" data-key="{{ day.isoformat }}">
       <span class="dow">{{ day|date:"D" }}</span>
       <span class="dom">{{ day.day }}</span>
     </button>
@@ -93,9 +93,8 @@
 
 {% block scripts %}
 <script>
-  // --- Week calendar: mark cooking days (client-side note only) ---
+  // --- Week calendar: shared Cooking Days, stored on the server ---
   const cal = document.getElementById("week-cal");
-  const DAYS_KEY = "cookbook-days";
   const CAL_OPEN_KEY = "cookbook-cal-open";
 
   cal.open = localStorage.getItem(CAL_OPEN_KEY) === "1";
@@ -103,20 +102,29 @@
     localStorage.setItem(CAL_OPEN_KEY, cal.open ? "1" : "0")
   );
 
-  let markedDays;
-  try { markedDays = new Set(JSON.parse(localStorage.getItem(DAYS_KEY)) || []); }
-  catch { markedDays = new Set(); }
-
-  const visibleKeys = [...cal.querySelectorAll(".day-pill")].map((p) => p.dataset.key);
-  markedDays = new Set([...markedDays].filter((d) => visibleKeys.includes(d)));
+  function csrfToken() {
+    const cookie = document.cookie
+      .split("; ")
+      .find((c) => c.startsWith("csrftoken="));
+    if (cookie) return cookie.split("=")[1];
+    const input = document.querySelector("[name=csrfmiddlewaretoken]");
+    return input ? input.value : "";
+  }
 
   cal.querySelectorAll(".day-pill").forEach((pill) => {
-    pill.classList.toggle("marked", markedDays.has(pill.dataset.key));
-    pill.addEventListener("click", () => {
-      const key = pill.dataset.key;
-      markedDays.has(key) ? markedDays.delete(key) : markedDays.add(key);
-      pill.classList.toggle("marked");
-      localStorage.setItem(DAYS_KEY, JSON.stringify([...markedDays]));
+    pill.addEventListener("click", async () => {
+      const response = await fetch("{% url 'toggle_cooking_day' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken(),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "date=" + encodeURIComponent(pill.dataset.key),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        pill.classList.toggle("marked", data.marked);
+      }
     });
   });
 </script>
