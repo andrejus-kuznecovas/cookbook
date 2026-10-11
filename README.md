@@ -6,12 +6,21 @@ few days, and get one combined shopping list where shared ingredients stack
 
 ## Architecture
 
-![Cookbook architecture](docs/architecture.jpg)
-
 Both phones use one login-protected URL on PythonAnywhere; Django keeps the
 shared state in a single SQLite file, and every push to `main` is tested by
-GitHub Actions and auto-deployed. The diagram source lives at
-`docs/diagrams/cookbook.archify.json` (regenerate with the `archify` skill).
+GitHub Actions and auto-deployed.
+
+Two renders of the same system, one per diagram skill in `.agents/skills/`:
+
+**archify** (dark interactive viewer, captured; source:
+`docs/diagrams/cookbook.archify.json`):
+
+![Cookbook architecture — archify](docs/architecture.jpg)
+
+**diagram-design** (editorial light style; source:
+`docs/diagrams/cookbook-diagram-design.html`):
+
+![Cookbook architecture — diagram-design](docs/architecture-editorial.jpg)
 
 ## How it works
 

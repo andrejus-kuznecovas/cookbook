@@ -10,3 +10,5 @@ staticfiles/
 *-architecture.html
 *.visual-check.json
 docs/diagrams/*.html
+# ...except hand-authored diagram sources
+!docs/diagrams/cookbook-diagram-design.html
