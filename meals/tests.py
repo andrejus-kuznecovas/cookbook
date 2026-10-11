@@ -1,6 +1,9 @@
+import json
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -284,3 +287,43 @@ class CookingDayTests(TestCase):
             response,
             f'class="day-pill today marked" data-key="{today.isoformat()}"',
         )
+
+
+class PwaTests(TestCase):
+    """The web app manifest and icons that make Cookbook installable."""
+
+    def load_manifest(self):
+        """Read the manifest through the staticfiles finders."""
+        path = finders.find("meals/manifest.webmanifest")
+        self.assertIsNotNone(path, "manifest.webmanifest not found by finders")
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_manifest_declares_installable_app(self):
+        manifest = self.load_manifest()
+        self.assertEqual(manifest["name"], "Cookbook")
+        self.assertEqual(manifest["short_name"], "Cookbook")
+        self.assertEqual(manifest["start_url"], "/")
+        self.assertEqual(manifest["display"], "standalone")
+        self.assertEqual(manifest["background_color"], "#faf8f5")
+        self.assertEqual(manifest["theme_color"], "#f97316")
+
+    def test_manifest_icons_point_at_existing_static_files(self):
+        icons = self.load_manifest()["icons"]
+        self.assertEqual(
+            sorted(icon["sizes"] for icon in icons), ["192x192", "512x512"]
+        )
+        for icon in icons:
+            with self.subTest(src=icon["src"]):
+                self.assertTrue(icon["src"].startswith(settings.STATIC_URL))
+                relative = icon["src"][len(settings.STATIC_URL):]
+                self.assertIsNotNone(
+                    finders.find(relative), f"{icon['src']} does not resolve"
+                )
+
+    def test_base_template_links_manifest_and_apple_touch_icon(self):
+        user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(user)
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(response, 'rel="manifest"')
+        self.assertContains(response, 'rel="apple-touch-icon"')

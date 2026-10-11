@@ -2,6 +2,7 @@
 
 import importlib
 import os
+import sys
 from unittest import mock
 
 from django.conf import settings as django_settings
@@ -88,6 +89,19 @@ class WhiteNoiseConfigurationTests(SimpleTestCase):
             django_settings.BASE_DIR / 'staticfiles')
 
     def test_whitenoise_storage_backend(self):
+        """Outside the test runner, static files use the WhiteNoise
+        manifest storage. (The test run itself swaps in the plain storage
+        because the manifest only exists after collectstatic.)"""
+        with mock.patch.object(sys, 'argv', ['manage.py', 'runserver']):
+            module = importlib.reload(settings_module)
+        try:
+            self.assertEqual(
+                module.STORAGES['staticfiles']['BACKEND'],
+                'whitenoise.storage.CompressedManifestStaticFilesStorage')
+        finally:
+            importlib.reload(settings_module)
+
+    def test_tests_use_plain_static_storage(self):
         self.assertEqual(
             django_settings.STORAGES['staticfiles']['BACKEND'],
-            'whitenoise.storage.CompressedManifestStaticFilesStorage')
+            'django.contrib.staticfiles.storage.StaticFilesStorage')
