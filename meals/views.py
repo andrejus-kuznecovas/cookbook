@@ -10,6 +10,13 @@ from django.views.decorators.http import require_POST
 from .aggregation import aggregate
 from .models import CookingDay, Ingredient, PlanEntry, Recipe, Unit
 
+ROLLING_WEEK_DAYS = 7
+
+
+def rolling_week(today):
+    """The Rolling Week: the 7 days starting today (see GLOSSARY.md)."""
+    return [today + timedelta(days=i) for i in range(ROLLING_WEEK_DAYS)]
+
 
 @login_required
 def recipe_list(request):
@@ -27,16 +34,15 @@ def recipe_list(request):
     planned_ids = set(PlanEntry.objects.values_list("recipe_id", flat=True))
     today = date.today()
     CookingDay.objects.filter(date__lt=today).delete()
-    marked_days = set(CookingDay.objects.values_list("date", flat=True))
-    week = [today + timedelta(days=i) for i in range(7)]
+    cooking_days = set(CookingDay.objects.values_list("date", flat=True))
     return render(
         request,
         "meals/recipe_list.html",
         {
             "recipes": recipes,
             "planned_ids": planned_ids,
-            "week": week,
-            "marked_days": marked_days,
+            "week": rolling_week(today),
+            "cooking_days": cooking_days,
         },
     )
 
@@ -48,8 +54,7 @@ def toggle_cooking_day(request):
         day = date.fromisoformat(request.POST.get("date", ""))
     except ValueError:
         return JsonResponse({"error": "Invalid date."}, status=400)
-    today = date.today()
-    if not today <= day <= today + timedelta(days=6):
+    if day not in rolling_week(date.today()):
         return JsonResponse({"error": "Date outside the rolling week."}, status=400)
     deleted, _ = CookingDay.objects.filter(date=day).delete()
     if not deleted:

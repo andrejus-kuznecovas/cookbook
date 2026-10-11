@@ -279,7 +279,7 @@ class CookingDayTests(TestCase):
             list(CookingDay.objects.values_list("date", flat=True)), [today]
         )
 
-    def test_planning_page_renders_marked_day(self):
+    def test_planning_page_renders_cooking_day(self):
         today = date.today()
         CookingDay.objects.create(date=today)
         response = self.client.get(reverse("recipe_list"))
@@ -320,6 +320,21 @@ class PwaTests(TestCase):
                 self.assertIsNotNone(
                     finders.find(relative), f"{icon['src']} does not resolve"
                 )
+
+    def test_manifest_url_serves_valid_json(self):
+        """The manifest URL itself serves JSON, without requiring login.
+
+        WhiteNoise serves from the staticfiles finders here (no
+        collectstatic output exists during tests).
+        """
+        with self.settings(WHITENOISE_USE_FINDERS=True, WHITENOISE_AUTOREFRESH=True):
+            response = self.client.get(
+                settings.STATIC_URL + "meals/manifest.webmanifest"
+            )
+        self.assertEqual(response.status_code, 200)
+        body = b"".join(response.streaming_content if response.streaming else [response.content])
+        manifest = json.loads(body)
+        self.assertEqual(manifest["name"], "Cookbook")
 
     def test_base_template_links_manifest_and_apple_touch_icon(self):
         user = User.objects.create_user("partner", password="test-pass-123")

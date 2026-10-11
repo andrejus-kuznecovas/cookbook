@@ -17,7 +17,7 @@
   </summary>
   <div class="week-days">
     {% for day in week %}
-    <button type="button" class="day-pill{% if forloop.first %} today{% endif %}{% if day in marked_days %} marked{% endif %}" data-key="{{ day.isoformat }}">
+    <button type="button" class="day-pill{% if forloop.first %} today{% endif %}{% if day in cooking_days %} marked{% endif %}" data-key="{{ day.isoformat }}">
       <span class="dow">{{ day|date:"D" }}</span>
       <span class="dom">{{ day.day }}</span>
     </button>

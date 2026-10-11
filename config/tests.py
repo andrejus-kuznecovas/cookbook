@@ -2,7 +2,6 @@
 
 import importlib
 import os
-import sys
 from unittest import mock
 
 from django.conf import settings as django_settings
@@ -88,20 +87,19 @@ class WhiteNoiseConfigurationTests(SimpleTestCase):
             django_settings.STATIC_ROOT,
             django_settings.BASE_DIR / 'staticfiles')
 
-    def test_whitenoise_storage_backend(self):
-        """Outside the test runner, static files use the WhiteNoise
-        manifest storage. (The test run itself swaps in the plain storage
-        because the manifest only exists after collectstatic.)"""
-        with mock.patch.object(sys, 'argv', ['manage.py', 'runserver']):
-            module = importlib.reload(settings_module)
-        try:
-            self.assertEqual(
-                module.STORAGES['staticfiles']['BACKEND'],
-                'whitenoise.storage.CompressedManifestStaticFilesStorage')
-        finally:
-            importlib.reload(settings_module)
+    def test_whitenoise_storage_backend_configured(self):
+        """The settings module always configures the WhiteNoise manifest
+        storage; CookbookTestRunner swaps in the plain storage only for
+        the live settings during a test run."""
+        self.assertEqual(
+            settings_module.STORAGES['staticfiles']['BACKEND'],
+            'whitenoise.storage.CompressedManifestStaticFilesStorage')
 
     def test_tests_use_plain_static_storage(self):
         self.assertEqual(
             django_settings.STORAGES['staticfiles']['BACKEND'],
             'django.contrib.staticfiles.storage.StaticFilesStorage')
+
+    def test_test_runner_configured(self):
+        self.assertEqual(
+            django_settings.TEST_RUNNER, 'config.test_runner.CookbookTestRunner')
