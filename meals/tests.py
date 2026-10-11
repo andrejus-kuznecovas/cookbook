@@ -289,6 +289,28 @@ class CookingDayTests(TestCase):
         )
 
 
+class PlanningPageSearchTests(TestCase):
+    """The planning page server-renders the search input and Surprise me control."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_planning_page_renders_search_and_surprise_controls(self):
+        Recipe.objects.create(name="Soup")
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(response, 'id="recipe-search"')
+        self.assertContains(response, 'id="search-clear"')
+        self.assertContains(response, 'id="surprise-btn"')
+        self.assertContains(response, "Surprise me")
+        self.assertContains(response, "No recipes match")
+
+    def test_empty_state_has_no_search_or_surprise_controls(self):
+        response = self.client.get(reverse("recipe_list"))
+        self.assertNotContains(response, 'id="recipe-search"')
+        self.assertNotContains(response, 'id="surprise-btn"')
+
+
 class PwaTests(TestCase):
     """The web app manifest and icons that make Cookbook installable."""
 

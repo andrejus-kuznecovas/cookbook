@@ -507,6 +507,78 @@
     }
     .empty svg { width: 52px; height: 52px; stroke: var(--accent); margin-bottom: 0.6rem; }
     .empty p { margin: 0 0 1.2rem; color: var(--muted); font-weight: 500; }
+
+    /* ===== BEGIN ticket p01: recipe search + Surprise me ===== */
+    .plan-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+    .search-box { position: relative; flex: 1; min-width: 0; }
+    .search-box .search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    #recipe-search {
+      width: 100%;
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 999px;
+      padding: 0.55rem 2.5rem 0.55rem 2.4rem;
+    }
+    #recipe-search::placeholder { color: var(--muted); }
+    #recipe-search:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .search-clear {
+      position: absolute;
+      right: 0.45rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 999px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .search-clear:hover { background: var(--accent-soft); color: var(--accent-dark); }
+    .search-clear svg { width: 12px; height: 12px; }
+    .surprise-btn {
+      flex-shrink: 0;
+      font-size: 0.9rem;
+      padding: 0.55rem 1.1rem;
+    }
+    .surprise-btn svg { width: 15px; height: 15px; }
+    .no-match {
+      text-align: center;
+      color: var(--muted);
+      font-weight: 500;
+      padding: 2rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin: 0;
+    }
+    .no-match[hidden] { display: none; }
+    /* ===== END ticket p01: recipe search + Surprise me ===== */
   </style>
 </head>
 <body class="{% block body_class %}{% endblock %}">
