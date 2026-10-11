@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .aggregation import aggregate
-from .models import CookingDay, Ingredient, PlanEntry, Recipe, Unit
+from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe, Unit
 
 ROLLING_WEEK_DAYS = 7
 
@@ -199,12 +199,33 @@ def shopping_list(request):
     return render(
         request,
         "meals/shopping_list.html",
-        {"lines": aggregate(ingredients), "planned_recipes": planned_recipes},
+        {
+            "lines": aggregate(ingredients),
+            "planned_recipes": planned_recipes,
+            "extras": Extra.objects.all(),
+        },
     )
+
+
+@login_required
+@require_POST
+def add_extra(request):
+    name = request.POST.get("name", "").strip()
+    if name:
+        Extra.objects.create(name=name)
+    return redirect("shopping_list")
+
+
+@login_required
+@require_POST
+def remove_extra(request, pk):
+    get_object_or_404(Extra, pk=pk).delete()
+    return redirect("shopping_list")
 
 
 @login_required
 @require_POST
 def clear_plan(request):
     PlanEntry.objects.all().delete()
+    Extra.objects.all().delete()
     return redirect("recipe_list")

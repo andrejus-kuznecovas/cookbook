@@ -507,6 +507,45 @@
     }
     .empty svg { width: 52px; height: 52px; stroke: var(--accent); margin-bottom: 0.6rem; }
     .empty p { margin: 0 0 1.2rem; color: var(--muted); font-weight: 500; }
+
+    /* ---------- BEGIN extras (ticket 03: shopping list Extras) ---------- */
+    .extras-heading {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 1.4rem 0 0.5rem;
+    }
+    .shop-item .extra-label {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .extra-remove { flex-shrink: 0; }
+    .extra-remove button {
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.2rem;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+    }
+    .extra-remove button:hover { color: #dc2626; background: #fef2f2; }
+    .extra-add-form {
+      display: flex;
+      gap: 0.45rem;
+      margin-bottom: 1rem;
+    }
+    .extra-add-form input[type="text"] { flex: 1; }
+    /* ---------- END extras ---------- */
   </style>
 </head>
 <body class="{% block body_class %}{% endblock %}">
