@@ -2,11 +2,12 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .aggregation import aggregate
-from .models import Ingredient, PlanEntry, Recipe, Unit
+from .models import CookingDay, Ingredient, PlanEntry, Recipe, Unit
 
 
 def recipe_list(request):
@@ -23,12 +24,34 @@ def recipe_list(request):
     recipes = Recipe.objects.prefetch_related("ingredients").all()
     planned_ids = set(PlanEntry.objects.values_list("recipe_id", flat=True))
     today = date.today()
+    CookingDay.objects.filter(date__lt=today).delete()
+    marked_days = set(CookingDay.objects.values_list("date", flat=True))
     week = [today + timedelta(days=i) for i in range(7)]
     return render(
         request,
         "meals/recipe_list.html",
-        {"recipes": recipes, "planned_ids": planned_ids, "week": week},
+        {
+            "recipes": recipes,
+            "planned_ids": planned_ids,
+            "week": week,
+            "marked_days": marked_days,
+        },
     )
+
+
+@require_POST
+def toggle_cooking_day(request):
+    try:
+        day = date.fromisoformat(request.POST.get("date", ""))
+    except ValueError:
+        return JsonResponse({"error": "Invalid date."}, status=400)
+    today = date.today()
+    if not today <= day <= today + timedelta(days=6):
+        return JsonResponse({"error": "Date outside the rolling week."}, status=400)
+    deleted, _ = CookingDay.objects.filter(date=day).delete()
+    if not deleted:
+        CookingDay.objects.create(date=day)
+    return JsonResponse({"marked": not deleted})
 
 
 def _parse_recipe_form(post):

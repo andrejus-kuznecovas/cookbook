@@ -1,8 +1,10 @@
+from datetime import date, timedelta
+
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .aggregation import aggregate
-from .models import Ingredient, Recipe
+from .models import CookingDay, Ingredient, Recipe
 
 
 class AggregationTests(SimpleTestCase):
@@ -170,3 +172,58 @@ class RecipeFormViewTests(TestCase):
         response = self.client.post(reverse("recipe_delete", args=[recipe.pk]))
         self.assertRedirects(response, reverse("recipe_list"))
         self.assertEqual(Recipe.objects.count(), 0)
+
+
+class CookingDayTests(TestCase):
+    def test_toggle_marks_a_day(self):
+        today = date.today()
+        response = self.client.post(
+            reverse("toggle_cooking_day"), {"date": today.isoformat()}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"marked": True})
+        self.assertTrue(CookingDay.objects.filter(date=today).exists())
+
+    def test_toggle_unmarks_a_marked_day(self):
+        today = date.today()
+        CookingDay.objects.create(date=today)
+        response = self.client.post(
+            reverse("toggle_cooking_day"), {"date": today.isoformat()}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"marked": False})
+        self.assertFalse(CookingDay.objects.filter(date=today).exists())
+
+    def test_toggle_rejects_invalid_date(self):
+        response = self.client.post(
+            reverse("toggle_cooking_day"), {"date": "not-a-date"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(CookingDay.objects.count(), 0)
+
+    def test_toggle_rejects_date_outside_rolling_week(self):
+        today = date.today()
+        for day in (today - timedelta(days=1), today + timedelta(days=7)):
+            response = self.client.post(
+                reverse("toggle_cooking_day"), {"date": day.isoformat()}
+            )
+            self.assertEqual(response.status_code, 400)
+        self.assertEqual(CookingDay.objects.count(), 0)
+
+    def test_planning_page_prunes_past_cooking_days(self):
+        today = date.today()
+        CookingDay.objects.create(date=today - timedelta(days=1))
+        CookingDay.objects.create(date=today)
+        self.client.get(reverse("recipe_list"))
+        self.assertEqual(
+            list(CookingDay.objects.values_list("date", flat=True)), [today]
+        )
+
+    def test_planning_page_renders_marked_day(self):
+        today = date.today()
+        CookingDay.objects.create(date=today)
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(
+            response,
+            f'class="day-pill today marked" data-key="{today.isoformat()}"',
+        )
