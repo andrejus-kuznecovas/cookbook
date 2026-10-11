@@ -1,0 +1,7 @@
+interface:
+  display_name: "TL;DR This"
+  short_description: "Turn a long output into a usable brief"
+  default_prompt: "Use $tldr-this to simplify the most recent long response."
+
+policy:
+  allow_implicit_invocation: false
