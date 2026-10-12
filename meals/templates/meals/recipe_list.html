@@ -44,7 +44,10 @@
   {% csrf_token %}
   <div class="recipe-grid">
   {% for recipe in recipes %}
-  <div class="recipe-card{% if recipe.id in planned_ids %} selected{% endif %}">
+  <div class="recipe-card{% if recipe.id in planned_ids %} selected{% endif %}" data-id="{{ recipe.id }}">
+    <button type="button" class="drag-handle" aria-label="Reorder {{ recipe.name }}">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>
+    </button>
     <label class="recipe-main">
       <input type="checkbox" name="recipes" value="{{ recipe.id }}"
              {% if recipe.id in planned_ids %}checked{% endif %}>
@@ -168,6 +171,7 @@
   refresh();
 
   // --- Search: filter cards by recipe name, keep hidden selections in the DOM ---
+  const grid = form.querySelector(".recipe-grid");
   const cards = form.querySelectorAll(".recipe-card");
   const searchInput = document.getElementById("recipe-search");
   const clearBtn = document.getElementById("search-clear");
@@ -186,6 +190,8 @@
     });
     noMatch.hidden = visible > 0;
     clearBtn.hidden = searchInput.value === "";
+    // Reordering a filtered subset is ambiguous, so disable the handles.
+    grid.classList.toggle("reorder-disabled", term !== "");
   }
 
   searchInput.addEventListener("input", applyFilter);
@@ -211,6 +217,112 @@
     }
     all.forEach((box, i) => { box.checked = picks.has(i); });
     refresh();
+  });
+
+  // --- Drag-to-reorder: hand-rolled pointer events on the drag handles ---
+  // One code path serves mouse and touch: pointerdown on a handle lifts the
+  // card as a fixed-position ghost, the real card stays in the grid as a
+  // dimmed placeholder and is moved to the nearest drop position on every
+  // pointermove. pointerup saves the new order of ALL recipe ids; a failed
+  // save restores the pre-drag order.
+  let drag = null;
+
+  function gridCards() {
+    return Array.from(grid.querySelectorAll(".recipe-card"));
+  }
+
+  function placeCard(x, y) {
+    const others = gridCards().filter((card) => card !== drag.card);
+    let best = null;
+    let bestDist = Infinity;
+    others.forEach((card) => {
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dist = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+      if (dist < bestDist) { bestDist = dist; best = { card, rect, cx, cy }; }
+    });
+    if (!best) return;
+    // Pointer level with the nearest card (same grid row): decide left or
+    // right of its midpoint. Otherwise: above or below.
+    const sameRow = y >= best.rect.top && y <= best.rect.bottom;
+    const before = sameRow ? x < best.cx : y < best.cy;
+    grid.insertBefore(drag.card, before ? best.card : best.card.nextSibling);
+  }
+
+  function cleanupDrag() {
+    drag.ghost.remove();
+    drag.card.classList.remove("drag-source");
+  }
+
+  function restoreOrder(order) {
+    order.forEach((card) => grid.appendChild(card));
+  }
+
+  grid.querySelectorAll(".drag-handle").forEach((handle) => {
+    // A completed drag must not toggle the card's selection checkbox.
+    handle.addEventListener("click", (event) => event.preventDefault());
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (drag || grid.classList.contains("reorder-disabled")) return;
+      event.preventDefault();
+      const card = handle.closest(".recipe-card");
+      const rect = card.getBoundingClientRect();
+      const ghost = card.cloneNode(true);
+      ghost.classList.add("drag-ghost");
+      ghost.style.width = rect.width + "px";
+      ghost.style.left = rect.left + "px";
+      ghost.style.top = rect.top + "px";
+      document.body.appendChild(ghost);
+      card.classList.add("drag-source");
+      drag = {
+        card,
+        ghost,
+        handle,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        initialOrder: gridCards(),
+      };
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle.addEventListener("pointermove", (event) => {
+      if (!drag || drag.handle !== handle) return;
+      drag.ghost.style.left = event.clientX - drag.offsetX + "px";
+      drag.ghost.style.top = event.clientY - drag.offsetY + "px";
+      placeCard(event.clientX, event.clientY);
+    });
+
+    handle.addEventListener("pointerup", async (event) => {
+      if (!drag || drag.handle !== handle) return;
+      cleanupDrag();
+      const previousOrder = drag.initialOrder;
+      const currentOrder = gridCards();
+      drag = null;
+      if (currentOrder.every((card, i) => card === previousOrder[i])) return;
+      const ids = currentOrder.map((card) => card.dataset.id);
+      try {
+        const response = await fetch("{% url 'reorder_recipes' %}", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken(),
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "order=" + encodeURIComponent(ids.join(",")),
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+      } catch (error) {
+        console.warn("Could not save the new order; restoring.", error);
+        restoreOrder(previousOrder);
+      }
+    });
+
+    handle.addEventListener("pointercancel", () => {
+      if (!drag || drag.handle !== handle) return;
+      cleanupDrag();
+      restoreOrder(drag.initialOrder);
+      drag = null;
+    });
   });
 </script>
 {% endif %}

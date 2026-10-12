@@ -19,9 +19,12 @@ class Recipe(models.Model):
     instructions = models.TextField(blank=True)
     servings = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Shared manual position on the planning page; spaced in steps of 10
+    # (10, 20, 30...) so the reorder endpoint can rewrite it cheaply.
+    sort_order = models.IntegerField(default=0)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["sort_order", "name"]
 
     def __str__(self):
         return self.name

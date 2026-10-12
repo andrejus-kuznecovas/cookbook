@@ -1,6 +1,8 @@
 import json
 from datetime import date, timedelta
+from importlib import import_module
 
+from django.apps import apps as django_apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
@@ -118,6 +120,7 @@ class AuthTests(TestCase):
             (reverse("recipe_new"), ["get", "post"]),
             (reverse("recipe_edit", args=[self.recipe.pk]), ["get", "post"]),
             (reverse("recipe_delete", args=[self.recipe.pk]), ["get", "post"]),
+            (reverse("reorder_recipes"), ["get", "post"]),
             (reverse("shopping_list"), ["get", "post"]),
             (reverse("add_extra"), ["get", "post"]),
             (reverse("remove_extra", args=[1]), ["get", "post"]),
@@ -436,6 +439,175 @@ class ThemeSettingsTests(TestCase):
             response, '<meta name="theme-color" media=', html=False
         )
         self.assertContains(response, '<meta name="theme-color" content="#1c1917">')
+
+
+class RecipeSortOrderTests(TestCase):
+    """Recipe.sort_order and the drag-to-reorder feature (ticket 01)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_recipes_ordered_by_sort_order_then_name(self):
+        Recipe.objects.create(name="Apple pie", sort_order=30)
+        Recipe.objects.create(name="Zebra cake", sort_order=10)
+        # Equal sort_order falls back to the name.
+        Recipe.objects.create(name="Bread", sort_order=20)
+        Recipe.objects.create(name="Aioli", sort_order=20)
+        self.assertEqual(
+            [r.name for r in Recipe.objects.all()],
+            ["Zebra cake", "Aioli", "Bread", "Apple pie"],
+        )
+
+    def test_data_migration_assigns_10_20_30_by_name(self):
+        """The data migration gives existing recipes 10, 20, 30... by name."""
+        Recipe.objects.create(name="Carbonara")
+        Recipe.objects.create(name="Apple pie")
+        Recipe.objects.create(name="Bread")
+        migration = import_module("meals.migrations.0006_recipe_sort_order_data")
+        migration.assign_sort_order(django_apps, None)
+        self.assertEqual(
+            list(Recipe.objects.values_list("name", "sort_order")),
+            [("Apple pie", 10), ("Bread", 20), ("Carbonara", 30)],
+        )
+
+    def new_recipe_payload(self, name):
+        return {
+            "name": name,
+            "servings": "",
+            "instructions": "",
+            "ing_name": ["Water"],
+            "ing_qty": ["1"],
+            "ing_unit": ["l"],
+        }
+
+    def test_new_recipe_appended_at_end(self):
+        Recipe.objects.create(name="Zebra cake", sort_order=40)
+        self.client.post(reverse("recipe_new"), self.new_recipe_payload("Apple pie"))
+        self.assertEqual(Recipe.objects.get(name="Apple pie").sort_order, 50)
+        # Alphabetically first, but rendered last.
+        self.assertEqual(
+            [r.name for r in Recipe.objects.all()], ["Zebra cake", "Apple pie"]
+        )
+
+    def test_first_recipe_gets_sort_order_10(self):
+        self.client.post(reverse("recipe_new"), self.new_recipe_payload("Soup"))
+        self.assertEqual(Recipe.objects.get(name="Soup").sort_order, 10)
+
+    def test_editing_a_recipe_keeps_its_sort_order(self):
+        recipe = Recipe.objects.create(name="Soup", sort_order=30)
+        self.client.post(
+            reverse("recipe_edit", args=[recipe.pk]),
+            self.new_recipe_payload("Better Soup"),
+        )
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.name, "Better Soup")
+        self.assertEqual(recipe.sort_order, 30)
+
+    def test_planning_page_renders_recipes_by_sort_order_with_handles(self):
+        Recipe.objects.create(name="Apple pie", sort_order=20)
+        Recipe.objects.create(name="Zebra cake", sort_order=10)
+        response = self.client.get(reverse("recipe_list"))
+        content = response.content.decode()
+        self.assertLess(content.index("Zebra cake"), content.index("Apple pie"))
+        self.assertEqual(content.count('class="drag-handle"'), 2)
+        for recipe in Recipe.objects.all():
+            self.assertContains(response, f'data-id="{recipe.id}"')
+
+
+class ReorderRecipesTests(TestCase):
+    """The reorder_recipes endpoint saving the shared drag-and-drop order."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+        self.apple = Recipe.objects.create(name="Apple pie", sort_order=10)
+        self.bread = Recipe.objects.create(name="Bread", sort_order=20)
+        self.soup = Recipe.objects.create(name="Soup", sort_order=30)
+
+    def post_order(self, ids):
+        return self.client.post(
+            reverse("reorder_recipes"), {"order": ",".join(str(i) for i in ids)}
+        )
+
+    def current_order(self):
+        return list(Recipe.objects.values_list("name", "sort_order"))
+
+    def test_form_encoded_order_saves_10_20_30(self):
+        response = self.post_order([self.soup.id, self.apple.id, self.bread.id])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"ok": True})
+        self.assertEqual(
+            self.current_order(),
+            [("Soup", 10), ("Apple pie", 20), ("Bread", 30)],
+        )
+
+    def test_json_order_saves(self):
+        response = self.client.post(
+            reverse("reorder_recipes"),
+            json.dumps({"order": [self.bread.id, self.soup.id, self.apple.id]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.current_order(),
+            [("Bread", 10), ("Soup", 20), ("Apple pie", 30)],
+        )
+
+    def assert_nothing_saved(self):
+        self.assertEqual(
+            self.current_order(),
+            [("Apple pie", 10), ("Bread", 20), ("Soup", 30)],
+        )
+
+    def test_unknown_id_rejected_and_nothing_saved(self):
+        response = self.post_order(
+            [self.soup.id, self.apple.id, self.bread.id, 9999]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_missing_id_rejected_and_nothing_saved(self):
+        response = self.post_order([self.soup.id, self.apple.id])
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_duplicate_id_rejected_and_nothing_saved(self):
+        response = self.post_order(
+            [self.soup.id, self.apple.id, self.bread.id, self.soup.id]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_non_integer_ids_rejected(self):
+        response = self.client.post(reverse("reorder_recipes"), {"order": "a,b,c"})
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_empty_order_rejected_when_recipes_exist(self):
+        response = self.client.post(reverse("reorder_recipes"), {"order": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_invalid_json_body_rejected(self):
+        response = self.client.post(
+            reverse("reorder_recipes"), "not json", content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_json_order_must_be_a_list(self):
+        response = self.client.post(
+            reverse("reorder_recipes"),
+            json.dumps({"order": "1,2,3"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assert_nothing_saved()
+
+    def test_get_not_allowed(self):
+        response = self.client.get(reverse("reorder_recipes"))
+        self.assertEqual(response.status_code, 405)
 
 
 class PwaTests(TestCase):

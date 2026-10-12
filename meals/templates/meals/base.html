@@ -588,6 +588,54 @@
     .no-match[hidden] { display: none; }
     /* ===== END ticket p01: recipe search + Surprise me ===== */
 
+    /* ===== BEGIN ticket 01: drag-to-reorder recipe cards =====
+       Only CSS variables are used, so light and dark themes both work
+       without theme-specific overrides. */
+    .drag-handle {
+      position: absolute;
+      top: 0.45rem;
+      right: 0.45rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: none;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--muted);
+      cursor: grab;
+      touch-action: none; /* the handle drags; it never scrolls the page */
+    }
+    .drag-handle:hover { background: var(--bg); }
+    .drag-handle:active { cursor: grabbing; transform: none; }
+    .drag-handle svg { width: 17px; height: 17px; fill: currentColor; }
+    /* Keep the title and chips clear of the handle. */
+    .recipe-card .recipe-main { padding-right: 3.1rem; }
+    /* While the search filter is active, reordering is ambiguous. */
+    .recipe-grid.reorder-disabled .drag-handle {
+      pointer-events: none;
+      opacity: 0.35;
+    }
+    /* The clone that follows the pointer. */
+    .recipe-card.drag-ghost {
+      position: fixed;
+      z-index: 50;
+      margin: 0;
+      pointer-events: none;
+      opacity: 0.85;
+      box-shadow: var(--shadow-lift);
+      transform: scale(1.02);
+    }
+    /* The real card marking the drop position while dragging. */
+    .recipe-card.drag-source {
+      opacity: 0.45;
+      border-style: dashed;
+      border-color: var(--border);
+      box-shadow: none;
+    }
+    /* ===== END ticket 01: drag-to-reorder recipe cards ===== */
+
     /* ---------- BEGIN extras (ticket 03: shopping list Extras) ---------- */
     .extras-heading {
       font-size: 1.05rem;
