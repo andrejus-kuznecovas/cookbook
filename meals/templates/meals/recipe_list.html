@@ -225,6 +225,11 @@
   // dimmed placeholder and is moved to the nearest drop position on every
   // pointermove. pointerup saves the new order of ALL recipe ids; a failed
   // save restores the pre-drag order.
+  //
+  // The move/up/cancel listeners live on the window for the duration of a
+  // drag. Pointer capture on the handle is NOT used: moving the card with
+  // insertBefore() detaches it from the DOM for a moment, which makes the
+  // browser release the capture mid-drag and the drag freezes half-done.
   let drag = null;
 
   function gridCards() {
@@ -247,16 +252,61 @@
     // right of its midpoint. Otherwise: above or below.
     const sameRow = y >= best.rect.top && y <= best.rect.bottom;
     const before = sameRow ? x < best.cx : y < best.cy;
-    grid.insertBefore(drag.card, before ? best.card : best.card.nextSibling);
+    const ref = before ? best.card : best.card.nextSibling;
+    // Already in place: don't touch the DOM (needless churn mid-drag).
+    if (ref === drag.card || ref === drag.card.nextSibling) return;
+    grid.insertBefore(drag.card, ref);
   }
 
   function cleanupDrag() {
     drag.ghost.remove();
     drag.card.classList.remove("drag-source");
+    drag = null;
+    window.removeEventListener("pointermove", onDragMove);
+    window.removeEventListener("pointerup", onDragEnd);
+    window.removeEventListener("pointercancel", onDragCancel);
   }
 
   function restoreOrder(order) {
     order.forEach((card) => grid.appendChild(card));
+  }
+
+  function onDragMove(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    event.preventDefault();
+    drag.ghost.style.left = event.clientX - drag.offsetX + "px";
+    drag.ghost.style.top = event.clientY - drag.offsetY + "px";
+    placeCard(event.clientX, event.clientY);
+  }
+
+  async function onDragEnd(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const { initialOrder } = drag;
+    cleanupDrag();
+    const currentOrder = gridCards();
+    if (currentOrder.every((card, i) => card === initialOrder[i])) return;
+    const ids = currentOrder.map((card) => card.dataset.id);
+    try {
+      const response = await fetch("{% url 'reorder_recipes' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken(),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "order=" + encodeURIComponent(ids.join(",")),
+      });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+    } catch (error) {
+      console.warn("Could not save the new order; restoring.", error);
+      restoreOrder(initialOrder);
+    }
+  }
+
+  function onDragCancel(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const { initialOrder } = drag;
+    cleanupDrag();
+    restoreOrder(initialOrder);
   }
 
   grid.querySelectorAll(".drag-handle").forEach((handle) => {
@@ -278,50 +328,14 @@
       drag = {
         card,
         ghost,
-        handle,
+        pointerId: event.pointerId,
         offsetX: event.clientX - rect.left,
         offsetY: event.clientY - rect.top,
         initialOrder: gridCards(),
       };
-      handle.setPointerCapture(event.pointerId);
-    });
-
-    handle.addEventListener("pointermove", (event) => {
-      if (!drag || drag.handle !== handle) return;
-      drag.ghost.style.left = event.clientX - drag.offsetX + "px";
-      drag.ghost.style.top = event.clientY - drag.offsetY + "px";
-      placeCard(event.clientX, event.clientY);
-    });
-
-    handle.addEventListener("pointerup", async (event) => {
-      if (!drag || drag.handle !== handle) return;
-      cleanupDrag();
-      const previousOrder = drag.initialOrder;
-      const currentOrder = gridCards();
-      drag = null;
-      if (currentOrder.every((card, i) => card === previousOrder[i])) return;
-      const ids = currentOrder.map((card) => card.dataset.id);
-      try {
-        const response = await fetch("{% url 'reorder_recipes' %}", {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": csrfToken(),
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: "order=" + encodeURIComponent(ids.join(",")),
-        });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-      } catch (error) {
-        console.warn("Could not save the new order; restoring.", error);
-        restoreOrder(previousOrder);
-      }
-    });
-
-    handle.addEventListener("pointercancel", () => {
-      if (!drag || drag.handle !== handle) return;
-      cleanupDrag();
-      restoreOrder(drag.initialOrder);
-      drag = null;
+      window.addEventListener("pointermove", onDragMove);
+      window.addEventListener("pointerup", onDragEnd);
+      window.addEventListener("pointercancel", onDragCancel);
     });
   });
 </script>
