@@ -14,6 +14,7 @@ urlpatterns = [
         views.remove_extra,
         name="remove_extra",
     ),
+    path("settings/", views.user_settings, name="settings"),
     path("clear-plan/", views.clear_plan, name="clear_plan"),
     path(
         "cooking-days/toggle/",

@@ -1,0 +1,26 @@
+{% extends "meals/base.html" %}
+
+{% block title %}Settings · Cookbook{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+<p class="subtitle">Preferences for your account.</p>
+<div class="form-card">
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label>Theme</label>
+      <div class="theme-options">
+        {% for value, label in themes %}
+        <label class="theme-option">
+          <input type="radio" name="theme" value="{{ value }}"
+                 {% if current_theme == value %}checked{% endif %}>
+          <span>{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <button type="submit" class="btn-primary">Save</button>
+  </form>
+</div>
+{% endblock %}

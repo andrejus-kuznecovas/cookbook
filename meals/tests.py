@@ -8,7 +8,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .aggregation import aggregate
-from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe
+from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe, UserSetting
 
 
 class AggregationTests(SimpleTestCase):
@@ -123,6 +123,7 @@ class AuthTests(TestCase):
             (reverse("remove_extra", args=[1]), ["get", "post"]),
             (reverse("clear_plan"), ["get", "post"]),
             (reverse("toggle_cooking_day"), ["get", "post"]),
+            (reverse("settings"), ["get", "post"]),
         ]
 
     def test_anonymous_requests_redirect_to_login_with_next(self):
@@ -367,6 +368,74 @@ class ExtraTests(TestCase):
         self.assertContains(response, f'action="{reverse("add_extra")}"')
         # The empty state still appears when no meals are selected.
         self.assertContains(response, "No meals selected yet")
+
+
+class ThemeSettingsTests(TestCase):
+    """The Settings page and the per-user theme choice (ticket 01)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+
+    def test_settings_page_renders_for_authenticated_user(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="theme"')
+        for value in ("system", "light", "dark"):
+            self.assertContains(response, f'value="{value}"')
+
+    def test_post_saves_each_valid_theme_and_html_reflects_it(self):
+        self.client.force_login(self.user)
+        for value in ("light", "dark", "system"):
+            with self.subTest(theme=value):
+                response = self.client.post(reverse("settings"), {"theme": value})
+                self.assertRedirects(response, reverse("settings"))
+                self.assertEqual(
+                    UserSetting.objects.get(user=self.user).theme, value
+                )
+                # A subsequent page load renders the chosen theme server-side.
+                response = self.client.get(reverse("recipe_list"))
+                self.assertContains(response, f'data-theme="{value}"')
+
+    def test_post_shows_success_toast_on_settings_page(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("settings"), {"theme": "dark"}, follow=True
+        )
+        self.assertContains(response, "Settings saved.")
+
+    def test_invalid_theme_value_does_not_save(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("settings"), {"theme": "neon"})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            UserSetting.objects.filter(user=self.user)
+            .exclude(theme="system")
+            .exists()
+        )
+
+    def test_login_page_for_anonymous_carries_system_theme(self):
+        response = self.client.get("/accounts/login/")
+        self.assertContains(response, 'data-theme="system"')
+
+    def test_pages_default_to_system_theme_without_a_setting(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(response, 'data-theme="system"')
+
+    def test_settings_link_in_nav_for_authenticated_user(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("recipe_list"))
+        self.assertContains(response, f'href="{reverse("settings")}"')
+
+    def test_forced_theme_uses_single_theme_color_meta(self):
+        self.client.force_login(self.user)
+        UserSetting.objects.create(user=self.user, theme="dark")
+        response = self.client.get(reverse("recipe_list"))
+        self.assertNotContains(
+            response, '<meta name="theme-color" media=', html=False
+        )
+        self.assertContains(response, '<meta name="theme-color" content="#1c1917">')
 
 
 class PwaTests(TestCase):

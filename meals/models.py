@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -71,6 +72,26 @@ class Extra(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Theme(models.TextChoices):
+    SYSTEM = "system", "System"
+    LIGHT = "light", "Light"
+    DARK = "dark", "Dark"
+
+
+class UserSetting(models.Model):
+    """Per-user preferences. One row per user, created on first save."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="setting"
+    )
+    theme = models.CharField(
+        max_length=10, choices=Theme.choices, default=Theme.SYSTEM
+    )
+
+    def __str__(self):
+        return f"Settings for {self.user.username} (theme: {self.theme})"
 
 
 class PlanEntry(models.Model):

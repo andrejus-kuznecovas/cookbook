@@ -3,12 +3,21 @@ from datetime import date, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .aggregation import aggregate
-from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe, Unit
+from .models import (
+    CookingDay,
+    Extra,
+    Ingredient,
+    PlanEntry,
+    Recipe,
+    Theme,
+    Unit,
+    UserSetting,
+)
 
 ROLLING_WEEK_DAYS = 7
 
@@ -221,6 +230,27 @@ def add_extra(request):
 def remove_extra(request, pk):
     get_object_or_404(Extra, pk=pk).delete()
     return redirect("shopping_list")
+
+
+@login_required
+def user_settings(request):
+    if request.method == "POST":
+        choice = request.POST.get("theme", "")
+        if choice not in Theme.values:
+            return HttpResponseBadRequest("Invalid theme.")
+        UserSetting.objects.update_or_create(
+            user=request.user, defaults={"theme": choice}
+        )
+        messages.success(request, "Settings saved.")
+        return redirect("settings")
+
+    setting = UserSetting.objects.filter(user=request.user).first()
+    current = setting.theme if setting else Theme.SYSTEM.value
+    return render(
+        request,
+        "meals/settings.html",
+        {"current_theme": current, "themes": Theme.choices},
+    )
 
 
 @login_required
