@@ -542,18 +542,6 @@ class ReorderRecipesTests(TestCase):
             [("Soup", 10), ("Apple pie", 20), ("Bread", 30)],
         )
 
-    def test_json_order_saves(self):
-        response = self.client.post(
-            reverse("reorder_recipes"),
-            json.dumps({"order": [self.bread.id, self.soup.id, self.apple.id]}),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            self.current_order(),
-            [("Bread", 10), ("Soup", 20), ("Apple pie", 30)],
-        )
-
     def assert_nothing_saved(self):
         self.assertEqual(
             self.current_order(),

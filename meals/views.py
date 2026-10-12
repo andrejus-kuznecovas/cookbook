@@ -1,4 +1,3 @@
-import json
 from datetime import date, timedelta
 
 from django.contrib import messages
@@ -78,34 +77,29 @@ def toggle_cooking_day(request):
 def reorder_recipes(request):
     """Save a new shared recipe order from the planning page drag-and-drop.
 
-    Accepts the full list of recipe ids either as a form-encoded ``order``
-    value ("3,1,2") or as a JSON body ({"order": [3, 1, 2]}). The list must
-    contain every recipe id exactly once, otherwise nothing is saved.
+    Accepts the full list of recipe ids as a form-encoded ``order`` value
+    ("3,1,2"). The list must contain every recipe id exactly once,
+    otherwise nothing is saved.
     """
-    if request.content_type == "application/json":
-        try:
-            raw_ids = json.loads(request.body).get("order", [])
-        except (json.JSONDecodeError, AttributeError):
-            return JsonResponse({"error": "Invalid JSON body."}, status=400)
-        if not isinstance(raw_ids, list):
-            return JsonResponse({"error": "'order' must be a list."}, status=400)
-    else:
-        raw = request.POST.get("order", "")
-        raw_ids = [part for part in raw.split(",") if part.strip()]
+    raw = request.POST.get("order", "")
+    raw_ids = [part for part in raw.split(",") if part.strip()]
 
     try:
         ids = [int(value) for value in raw_ids]
-    except (TypeError, ValueError):
+    except ValueError:
         return JsonResponse({"error": "Recipe ids must be integers."}, status=400)
 
-    existing_ids = set(Recipe.objects.values_list("id", flat=True))
-    if len(ids) != len(set(ids)) or set(ids) != existing_ids:
+    if len(ids) != len(set(ids)):
         return JsonResponse(
             {"error": "Order must list every recipe id exactly once."}, status=400
         )
 
     with transaction.atomic():
         recipes = Recipe.objects.in_bulk(ids)
+        if set(recipes) != set(ids) or Recipe.objects.count() != len(ids):
+            return JsonResponse(
+                {"error": "Order must list every recipe id exactly once."}, status=400
+            )
         for position, recipe_id in enumerate(ids, start=1):
             recipes[recipe_id].sort_order = position * 10
         Recipe.objects.bulk_update(recipes.values(), ["sort_order"])
