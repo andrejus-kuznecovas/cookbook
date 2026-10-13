@@ -48,4 +48,28 @@
     </form>
   </div>
 </div>
+
+<div class="form-card">
+  <div class="field">
+    <label>Barbora links</label>
+    <p class="staples-hint">Remembered barbora.lt products for shopping list lines. Add them from the shopping list.</p>
+    {% if barbora_links %}
+    <ul class="staple-list">
+      {% for link in barbora_links %}
+      <li>
+        <span class="staple-name">{{ link.name }}</span>
+        <a class="barbora-url" href="{{ link.url }}" target="_blank" rel="noopener"
+           aria-label="Open {{ link.name }} on Barbora">{{ link.url|truncatechars:36 }}</a>
+        <form method="post" action="{% url 'remove_barbora_link' link.pk %}" class="extra-remove">
+          {% csrf_token %}
+          <button type="submit" aria-label="Remove Barbora link for {{ link.name }}">&times;</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="staples-hint">No Barbora links yet.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

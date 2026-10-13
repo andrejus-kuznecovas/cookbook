@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from .aggregation import aggregate, split_staples
 from .models import (
+    BarboraLink,
     CookingDay,
     Extra,
     Ingredient,
@@ -249,6 +250,15 @@ def shopping_list(request):
     # requests and are never filtered.
     staple_names = Staple.objects.values_list("name", flat=True)
     lines, assumed_staples = split_staples(aggregate(ingredients), staple_names)
+    # Barbora links match lines and Extras by name, case-insensitively.
+    barbora_urls = {
+        link.name.strip().lower(): link.url for link in BarboraLink.objects.all()
+    }
+    for line in lines:
+        line.barbora_url = barbora_urls.get(line.name.lower())
+    extras = list(Extra.objects.all())
+    for extra in extras:
+        extra.barbora_url = barbora_urls.get(extra.name.strip().lower())
     return render(
         request,
         "meals/shopping_list.html",
@@ -256,7 +266,7 @@ def shopping_list(request):
             "lines": lines,
             "assumed_staples": assumed_staples,
             "planned_recipes": planned_recipes,
-            "extras": Extra.objects.all(),
+            "extras": extras,
         },
     )
 
@@ -294,6 +304,41 @@ def remove_staple(request, pk):
     return redirect("settings")
 
 
+def _is_barbora_url(url):
+    return url.startswith("https://barbora.lt/") or url.startswith(
+        "https://www.barbora.lt/"
+    )
+
+
+@login_required
+@require_POST
+def add_barbora_link(request):
+    """UPSERT a Barbora Link: name + barbora.lt product url."""
+    name = request.POST.get("name", "").strip()
+    url = request.POST.get("url", "").strip()
+    if not name:
+        return redirect("shopping_list")
+    if not _is_barbora_url(url):
+        messages.error(
+            request, "Barbora links must start with https://barbora.lt/."
+        )
+        return redirect("shopping_list")
+    link = BarboraLink.objects.filter(name__iexact=name).first()
+    if link:
+        link.url = url
+        link.save()
+    else:
+        BarboraLink.objects.create(name=name, url=url)
+    return redirect("shopping_list")
+
+
+@login_required
+@require_POST
+def remove_barbora_link(request, pk):
+    get_object_or_404(BarboraLink, pk=pk).delete()
+    return redirect("settings")
+
+
 @login_required
 def user_settings(request):
     if request.method == "POST":
@@ -315,6 +360,7 @@ def user_settings(request):
             "current_theme": current,
             "themes": Theme.choices,
             "staples": Staple.objects.all(),
+            "barbora_links": BarboraLink.objects.all(),
         },
     )
 

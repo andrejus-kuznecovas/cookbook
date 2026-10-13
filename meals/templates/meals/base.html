@@ -435,7 +435,7 @@
       letter-spacing: 0.04em;
       margin-bottom: 0.35rem;
     }
-    input[type="text"], input[type="number"], input[type="password"], textarea, select {
+    input[type="text"], input[type="number"], input[type="password"], input[type="url"], textarea, select {
       font: inherit;
       width: 100%;
       padding: 0.65rem 0.85rem;
@@ -765,6 +765,59 @@
     .staple-list .staple-name { font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
     .field > .extra-add-form { margin-bottom: 0; }
     /* ---------- END pantry staples ---------- */
+
+    /* ---------- BEGIN barbora links ----------
+       Only CSS variables are used, so light and dark themes both work
+       without theme-specific overrides. */
+    .barbora-link, .barbora-teach {
+      flex-shrink: 0;
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .barbora-link { color: var(--accent-dark); }
+    .barbora-link svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .barbora-link:hover { background: var(--accent-soft); }
+    .barbora-teach { color: var(--muted); font-size: 1.2rem; line-height: 1; font-weight: 600; }
+    .barbora-teach:hover { color: var(--accent-dark); background: var(--accent-soft); }
+    .barbora-teach-form {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .barbora-teach-form[hidden] { display: none; }
+    .barbora-teach-title {
+      margin: 0 0 0.5rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+    .barbora-teach-row { display: flex; gap: 0.45rem; }
+    .barbora-teach-row input[type="url"] { flex: 1; min-width: 0; }
+    .barbora-url {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent-dark);
+      text-decoration: none;
+      overflow-wrap: anywhere;
+      margin-left: auto;
+      padding: 0.55rem 0.25rem;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+    .barbora-url:hover { text-decoration: underline; }
+    /* ---------- END barbora links ---------- */
 
     /* ---------- Dark mode ----------
        Light is the base style set above. The dark declarations exist

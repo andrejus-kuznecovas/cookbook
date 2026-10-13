@@ -15,6 +15,16 @@ urlpatterns = [
         views.remove_extra,
         name="remove_extra",
     ),
+    path(
+        "shopping-list/barbora/add/",
+        views.add_barbora_link,
+        name="add_barbora_link",
+    ),
+    path(
+        "settings/barbora/<int:pk>/remove/",
+        views.remove_barbora_link,
+        name="remove_barbora_link",
+    ),
     path("settings/", views.user_settings, name="settings"),
     path("settings/staples/add/", views.add_staple, name="add_staple"),
     path(

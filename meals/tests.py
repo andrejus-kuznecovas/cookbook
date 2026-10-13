@@ -1,16 +1,22 @@
 import json
+import tempfile
 from datetime import date, timedelta
 from importlib import import_module
+from io import StringIO
+from pathlib import Path
 
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
+from django.core.management import call_command
+from django.db import IntegrityError
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .aggregation import aggregate, split_staples
 from .models import (
+    BarboraLink,
     CookingDay,
     Extra,
     Ingredient,
@@ -191,6 +197,8 @@ class AuthTests(TestCase):
             (reverse("clear_plan"), ["get", "post"]),
             (reverse("add_staple"), ["get", "post"]),
             (reverse("remove_staple", args=[1]), ["get", "post"]),
+            (reverse("add_barbora_link"), ["get", "post"]),
+            (reverse("remove_barbora_link", args=[1]), ["get", "post"]),
             (reverse("toggle_cooking_day"), ["get", "post"]),
             (reverse("settings"), ["get", "post"]),
         ]
@@ -545,6 +553,229 @@ class StapleTests(TestCase):
         Staple.objects.create(name="Salt")
         self.client.post(reverse("clear_plan"))
         self.assertEqual(Staple.objects.count(), 1)
+
+
+class BarboraLinkModelTests(TestCase):
+    """BarboraLink: a line's remembered barbora.lt product URL (GLOSSARY.md)."""
+
+    def test_name_unique_case_insensitively(self):
+        BarboraLink.objects.create(
+            name="Butter", url="https://barbora.lt/produktai/sviestas"
+        )
+        with self.assertRaises(IntegrityError):
+            BarboraLink.objects.create(
+                name="butter", url="https://barbora.lt/produktai/kitas-sviestas"
+            )
+
+
+class BarboraLinkViewTests(TestCase):
+    """add_barbora_link / remove_barbora_link (login + POST + CSRF)."""
+
+    BUTTER_URL = "https://barbora.lt/produktai/sviestas-rokiskio-82"
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def add(self, name, url):
+        return self.client.post(
+            reverse("add_barbora_link"), {"name": name, "url": url}
+        )
+
+    def test_add_creates_and_redirects_to_shopping_list(self):
+        response = self.add("Butter", self.BUTTER_URL)
+        self.assertRedirects(response, reverse("shopping_list"))
+        link = BarboraLink.objects.get()
+        self.assertEqual(link.name, "Butter")
+        self.assertEqual(link.url, self.BUTTER_URL)
+
+    def test_add_accepts_www_subdomain(self):
+        url = "https://www.barbora.lt/produktai/sviestas"
+        self.add("Butter", url)
+        self.assertEqual(BarboraLink.objects.get().url, url)
+
+    def test_add_upserts_on_same_name_different_casing(self):
+        BarboraLink.objects.create(name="Butter", url=self.BUTTER_URL)
+        new_url = "https://barbora.lt/produktai/sviestas-dvaro"
+        response = self.add("  bUtTeR ", new_url)
+        self.assertRedirects(response, reverse("shopping_list"))
+        link = BarboraLink.objects.get()
+        self.assertEqual(link.name, "Butter")  # original casing kept
+        self.assertEqual(link.url, new_url)
+
+    def test_add_rejects_non_barbora_urls_without_creating(self):
+        bad_urls = (
+            "https://example.com/produktai/sviestas",
+            "http://barbora.lt/produktai/sviestas",  # not https
+            "https://barbora.lt.evil.com/produktai/sviestas",
+            "barbora.lt/produktai/sviestas",
+            "javascript:alert(1)",
+        )
+        for url in bad_urls:
+            with self.subTest(url=url):
+                response = self.add("Butter", url)
+                self.assertRedirects(response, reverse("shopping_list"))
+        self.assertEqual(BarboraLink.objects.count(), 0)
+
+    def test_add_rejected_url_shows_a_message(self):
+        response = self.add("Butter", "https://example.com/x", )
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(
+            response, "Barbora links must start with https://barbora.lt/"
+        )
+
+    def test_add_rejects_blank_name_silently(self):
+        for name in ("", "   "):
+            with self.subTest(name=repr(name)):
+                response = self.add(name, self.BUTTER_URL)
+                self.assertRedirects(response, reverse("shopping_list"))
+        self.assertEqual(BarboraLink.objects.count(), 0)
+
+    def test_remove_and_redirect_to_settings(self):
+        link = BarboraLink.objects.create(name="Butter", url=self.BUTTER_URL)
+        response = self.client.post(
+            reverse("remove_barbora_link", args=[link.pk])
+        )
+        self.assertRedirects(response, reverse("settings"))
+        self.assertEqual(BarboraLink.objects.count(), 0)
+
+
+class BarboraLinkShoppingListTests(TestCase):
+    """Barbora links and teach affordances on the Shopping List."""
+
+    BUTTER_URL = "https://barbora.lt/produktai/sviestas-rokiskio-82"
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def plan_recipe_with(self, *ingredient_rows):
+        recipe = Recipe.objects.create(name="Soup")
+        for name, quantity, unit in ingredient_rows:
+            Ingredient.objects.create(
+                recipe=recipe, name=name, quantity=quantity, unit=unit
+            )
+        PlanEntry.objects.create(recipe=recipe)
+        return recipe
+
+    def test_mapped_recipe_line_shows_product_link(self):
+        self.plan_recipe_with(("Butter", 200, "g"))
+        BarboraLink.objects.create(name="Butter", url=self.BUTTER_URL)
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, self.BUTTER_URL)
+        self.assertContains(response, 'aria-label="Open Butter on Barbora"')
+
+    def test_match_is_case_insensitive(self):
+        self.plan_recipe_with(("Butter", 200, "g"))
+        BarboraLink.objects.create(name="butter", url=self.BUTTER_URL)
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, self.BUTTER_URL)
+
+    def test_extras_get_product_links(self):
+        extra_url = "https://barbora.lt/produktai/kava-pupeles"
+        Extra.objects.create(name="Coffee beans")
+        BarboraLink.objects.create(name="coffee beans", url=extra_url)
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, extra_url)
+        self.assertContains(
+            response, 'aria-label="Open Coffee beans on Barbora"'
+        )
+
+    def test_unmapped_line_shows_teach_affordance_not_product_link(self):
+        self.plan_recipe_with(("Butter", 200, "g"))
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(
+            response, 'aria-label="Link Butter to a Barbora product"'
+        )
+        self.assertNotContains(response, 'aria-label="Open Butter on Barbora"')
+
+    def test_staple_filtered_lines_show_no_links(self):
+        salt_url = "https://barbora.lt/produktai/druska"
+        self.plan_recipe_with(("Salt", 1, "pinch"))
+        Staple.objects.create(name="salt")
+        BarboraLink.objects.create(name="Salt", url=salt_url)
+        response = self.client.get(reverse("shopping_list"))
+        self.assertNotContains(response, salt_url)
+        self.assertNotContains(response, 'aria-label="Link Salt')
+
+    def test_recipe_lines_keep_tick_off_keys(self):
+        """The restructure must not change localStorage data-keys."""
+        self.plan_recipe_with(("Butter", 200, "g"))
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, 'data-key="butter|g"')
+
+
+class BarboraLinkSettingsTests(TestCase):
+    """The Barbora links management card on the Settings page."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_settings_page_lists_links_with_remove_control(self):
+        link = BarboraLink.objects.create(
+            name="Butter", url="https://barbora.lt/produktai/sviestas"
+        )
+        response = self.client.get(reverse("settings"))
+        self.assertContains(response, "Butter")
+        self.assertContains(response, link.url)
+        self.assertContains(
+            response,
+            f'action="{reverse("remove_barbora_link", args=[link.pk])}"',
+        )
+
+
+class LoadBarboraLinksCommandTests(TestCase):
+    """load_barbora_links: idempotent JSON upsert of Barbora links."""
+
+    def run_command(self, mapping):
+        out = StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "links.json"
+            path.write_text(json.dumps(mapping), encoding="utf-8")
+            call_command("load_barbora_links", str(path), stdout=out)
+        return out.getvalue()
+
+    def test_creates_links(self):
+        output = self.run_command(
+            {
+                "Butter": "https://barbora.lt/produktai/sviestas",
+                "Milk": "https://www.barbora.lt/produktai/pienas",
+            }
+        )
+        self.assertEqual(BarboraLink.objects.count(), 2)
+        self.assertIn("2 created", output)
+
+    def test_updates_existing_link_case_insensitively(self):
+        BarboraLink.objects.create(
+            name="Butter", url="https://barbora.lt/produktai/senas"
+        )
+        new_url = "https://barbora.lt/produktai/naujas"
+        output = self.run_command({"butter": new_url})
+        link = BarboraLink.objects.get()
+        self.assertEqual(link.name, "Butter")  # original casing kept
+        self.assertEqual(link.url, new_url)
+        self.assertIn("1 updated", output)
+
+    def test_skips_invalid_urls_and_blank_names(self):
+        output = self.run_command(
+            {
+                "Butter": "https://example.com/not-barbora",
+                "   ": "https://barbora.lt/produktai/kazkas",
+                "Milk": "https://barbora.lt/produktai/pienas",
+            }
+        )
+        self.assertEqual(
+            list(BarboraLink.objects.values_list("name", flat=True)), ["Milk"]
+        )
+        self.assertIn("2 skipped", output)
+
+    def test_idempotent_second_run(self):
+        mapping = {"Butter": "https://barbora.lt/produktai/sviestas"}
+        self.run_command(mapping)
+        output = self.run_command(mapping)
+        self.assertEqual(BarboraLink.objects.count(), 1)
+        self.assertIn("0 created", output)
 
 
 class ThemeSettingsTests(TestCase):

@@ -1,6 +1,7 @@
 # Barbora integration — push the Shopping List toward the barbora.lt cart
 
-Status: idea / spec only, no tickets yet
+Status: phase 2 in progress (issues/01-product-links.md); phase 1 dropped
+by owner decision (search links alone judged not useful)
 
 ## Goal
 

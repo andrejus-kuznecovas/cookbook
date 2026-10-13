@@ -48,6 +48,14 @@ skips recipe-derived lines that match a Staple case-insensitively and
 discloses them as assumed-at-home instead of listing them to buy. Staples
 never hide Extras. Avoid: "pantry item", "always-have".
 
+## Barbora Link
+
+A Shopping List line's remembered barbora.lt product URL: the exact product
+the household buys for that line. Matched to recipe-derived lines and Extras
+by name, case-insensitively. Shared by both users; taught once from the
+Shopping List and managed on the Settings page. Avoid: "mapping",
+"product link".
+
 ## Stacking
 
 Combining Ingredient quantities of the same normalized name and compatible

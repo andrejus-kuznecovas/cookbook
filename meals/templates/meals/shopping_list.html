@@ -14,17 +14,32 @@
 
 <div class="shop-card" id="shop-card">
   {% for line in lines %}
-  <label class="shop-item" data-key="{{ line.name|lower }}|{{ line.unit }}">
-    <input type="checkbox">
-    <span class="check-ring">
-      <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
-    </span>
-    <span class="item-text">
-      <span class="item-name">{{ line.name }}</span>
-      <div class="item-recipes">{{ line.recipes|join:", " }}</div>
-    </span>
-    <span class="qty-badge">{{ line.display_quantity }}</span>
-  </label>
+  {# Outer div + inner label (the Extras pattern): the Barbora control #}
+  {# sits outside the label so tapping it never toggles the checkbox. #}
+  <div class="shop-item" data-key="{{ line.name|lower }}|{{ line.unit }}">
+    <label class="extra-label">
+      <input type="checkbox">
+      <span class="check-ring">
+        <svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg>
+      </span>
+      <span class="item-text">
+        <span class="item-name">{{ line.name }}</span>
+        <div class="item-recipes">{{ line.recipes|join:", " }}</div>
+      </span>
+      <span class="qty-badge">{{ line.display_quantity }}</span>
+    </label>
+    {% if line.barbora_url %}
+    <a class="barbora-link" href="{{ line.barbora_url }}" target="_blank" rel="noopener"
+       aria-label="Open {{ line.name }} on Barbora">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>
+      </svg>
+    </a>
+    {% else %}
+    <button type="button" class="barbora-teach" data-name="{{ line.name }}"
+            aria-label="Link {{ line.name }} to a Barbora product">+</button>
+    {% endif %}
+  </div>
   {% endfor %}
 </div>
 
@@ -66,6 +81,17 @@
         <span class="item-name">{{ extra.name }}</span>
       </span>
     </label>
+    {% if extra.barbora_url %}
+    <a class="barbora-link" href="{{ extra.barbora_url }}" target="_blank" rel="noopener"
+       aria-label="Open {{ extra.name }} on Barbora">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 7h12l1 13H5L6 7z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>
+      </svg>
+    </a>
+    {% else %}
+    <button type="button" class="barbora-teach" data-name="{{ extra.name }}"
+            aria-label="Link {{ extra.name }} to a Barbora product">+</button>
+    {% endif %}
     <form method="post" action="{% url 'remove_extra' extra.pk %}" class="extra-remove">
       {% csrf_token %}
       <button type="submit" aria-label="Remove {{ extra.name }}">&times;</button>
@@ -78,6 +104,18 @@
   {% csrf_token %}
   <input type="text" name="name" maxlength="200" placeholder="Add an extra (dish soap, coffee beans…)" aria-label="Extra item name">
   <button type="submit" class="btn-ghost">Add</button>
+</form>
+
+{# Shared teach form: a "+" on a line prefills and reveals it. #}
+<form method="post" action="{% url 'add_barbora_link' %}" class="barbora-teach-form" id="barbora-teach-form" hidden>
+  {% csrf_token %}
+  <input type="hidden" name="name" id="barbora-teach-name">
+  <p class="barbora-teach-title" id="barbora-teach-title"></p>
+  <div class="barbora-teach-row">
+    <input type="url" name="url" id="barbora-teach-url" required inputmode="url"
+           placeholder="Paste barbora.lt product link" aria-label="Barbora product link">
+    <button type="submit" class="btn-ghost">Save</button>
+  </div>
 </form>
 
 {% if lines or assumed_staples %}
@@ -132,6 +170,22 @@
     });
   });
   refresh();
+
+  // A "+" on an unmapped line reveals the shared teach form with the
+  // line's name prefilled; saving posts to add_barbora_link.
+  const teachForm = document.getElementById("barbora-teach-form");
+  const teachName = document.getElementById("barbora-teach-name");
+  const teachTitle = document.getElementById("barbora-teach-title");
+  const teachUrl = document.getElementById("barbora-teach-url");
+  document.querySelectorAll(".barbora-teach").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      teachName.value = btn.dataset.name;
+      teachTitle.textContent = 'Link "' + btn.dataset.name + '" to a Barbora product';
+      teachForm.hidden = false;
+      teachForm.scrollIntoView({ block: "nearest" });
+      teachUrl.focus();
+    });
+  });
 </script>
 {% endif %}
 {% endblock %}

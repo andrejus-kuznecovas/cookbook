@@ -101,6 +101,30 @@ class Staple(models.Model):
         return self.name
 
 
+class BarboraLink(models.Model):
+    """A Shopping List line's remembered barbora.lt product URL (GLOSSARY.md).
+
+    Matched to recipe-derived lines and Extras by name, case-insensitively.
+    Shared by both users; taught from the Shopping List and managed on the
+    Settings page.
+    """
+
+    name = models.CharField(max_length=200)
+    url = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = [Lower("name")]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"), name="barboralink_name_case_insensitive_unique"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.name} -> {self.url}"
+
+
 class Theme(models.TextChoices):
     SYSTEM = "system", "System"
     LIGHT = "light", "Light"
