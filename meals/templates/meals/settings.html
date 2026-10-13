@@ -23,4 +23,29 @@
     <button type="submit" class="btn-primary">Save</button>
   </form>
 </div>
+
+<div class="form-card">
+  <div class="field">
+    <label>Staples</label>
+    <p class="staples-hint">Things you always have at home — the shopping list skips them.</p>
+    {% if staples %}
+    <ul class="staple-list">
+      {% for staple in staples %}
+      <li>
+        <span class="staple-name">{{ staple.name }}</span>
+        <form method="post" action="{% url 'remove_staple' staple.pk %}" class="extra-remove">
+          {% csrf_token %}
+          <button type="submit" aria-label="Remove {{ staple.name }}">&times;</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <form method="post" action="{% url 'add_staple' %}" class="extra-add-form">
+      {% csrf_token %}
+      <input type="text" name="name" maxlength="200" placeholder="Add a staple (salt, olive oil…)" aria-label="Staple name">
+      <button type="submit" class="btn-ghost">Add</button>
+    </form>
+  </div>
+</div>
 {% endblock %}

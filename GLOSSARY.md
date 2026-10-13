@@ -40,6 +40,14 @@ Stored in the database and shared by both users; removed individually or
 wiped together with the Meal Plan by Clear plan. Avoid: "custom item",
 "ad-hoc item".
 
+## Staple
+
+An ingredient name the household always has at home ("salt", "olive oil").
+Shared by both users and managed on the Settings page. The Shopping List
+skips recipe-derived lines that match a Staple case-insensitively and
+discloses them as assumed-at-home instead of listing them to buy. Staples
+never hide Extras. Avoid: "pantry item", "always-have".
+
 ## Stacking
 
 Combining Ingredient quantities of the same normalized name and compatible

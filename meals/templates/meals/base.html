@@ -732,6 +732,40 @@
     }
     /* ---------- END theme settings ---------- */
 
+    /* ---------- BEGIN pantry staples ----------
+       Only CSS variables are used, so light and dark themes both work
+       without theme-specific overrides. */
+    .staples-note {
+      background: var(--surface);
+      border: none;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .staples-note summary { padding: 0.65rem 1rem; color: var(--muted); }
+    .staples-note-body {
+      margin: 0;
+      padding: 0 1rem 0.8rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .staples-note-body a { color: var(--accent-dark); font-weight: 600; }
+    .staples-hint { margin: 0 0 0.6rem; font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+    .staple-list { list-style: none; margin: 0 0 0.9rem; padding: 0; }
+    .staple-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .staple-list li:last-child { border-bottom: none; }
+    .staple-list .staple-name { font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
+    .field > .extra-add-form { margin-bottom: 0; }
+    /* ---------- END pantry staples ---------- */
+
     /* ---------- Dark mode ----------
        Light is the base style set above. The dark declarations exist
        twice on purpose: once behind prefers-color-scheme for

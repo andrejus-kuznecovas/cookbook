@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Unit(models.TextChoices):
@@ -72,6 +73,29 @@ class Extra(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+
+    def __str__(self):
+        return self.name
+
+
+class Staple(models.Model):
+    """An ingredient name the household always has at home (see GLOSSARY.md).
+
+    Shared by both users and managed on the Settings page. The Shopping
+    List skips recipe-derived lines matching a Staple case-insensitively
+    and discloses them as assumed-at-home. Staples never hide Extras.
+    """
+
+    name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = [Lower("name")]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"), name="staple_name_case_insensitive_unique"
+            )
+        ]
 
     def __str__(self):
         return self.name

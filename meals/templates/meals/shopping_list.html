@@ -28,7 +28,7 @@
   {% endfor %}
 </div>
 
-{% else %}
+{% elif not assumed_staples %}
 <div class="empty">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
@@ -37,6 +37,19 @@
   <p>No meals selected yet. Pick some recipes first.</p>
   <a class="btn btn-primary" href="{% url 'recipe_list' %}">Pick recipes</a>
 </div>
+{% endif %}
+
+{% if assumed_staples %}
+<details class="staples-note">
+  <summary>
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+    Assumed you have: {{ assumed_staples|join:", " }}
+  </summary>
+  <p class="staples-note-body">
+    These staples were skipped because they're always at home.
+    Manage them in <a href="{% url 'settings' %}">Settings</a>.
+  </p>
+</details>
 {% endif %}
 
 <h2 class="extras-heading">Extras</h2>
@@ -67,7 +80,7 @@
   <button type="submit" class="btn-ghost">Add</button>
 </form>
 
-{% if lines %}
+{% if lines or assumed_staples %}
 <div class="actionbar">
   <div class="actionbar-inner">
     <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Back</a>

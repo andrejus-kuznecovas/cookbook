@@ -69,3 +69,24 @@ def aggregate(ingredients) -> list[AggregatedLine]:
             line.recipes.append(recipe_name)
 
     return sorted(lines.values(), key=lambda l: (l.name.lower(), l.unit))
+
+
+def split_staples(lines, staple_names) -> tuple[list[AggregatedLine], list[str]]:
+    """Partition aggregated lines into (lines to buy, assumed staple names).
+
+    Lines whose name matches a staple name case-insensitively are dropped
+    from the shopping list. Their names come back as the second element
+    (first-seen casing, deduplicated, sorted alphabetically) so the page
+    can disclose what it assumed is at home instead of silently dropping it.
+    Staples only filter recipe-derived lines; Extras never pass through here.
+    """
+    staples = {name.strip().lower() for name in staple_names}
+    to_buy: list[AggregatedLine] = []
+    assumed: dict[str, str] = {}
+    for line in lines:
+        key = line.name.lower()
+        if key in staples:
+            assumed.setdefault(key, line.name)
+        else:
+            to_buy.append(line)
+    return to_buy, sorted(assumed.values(), key=str.lower)

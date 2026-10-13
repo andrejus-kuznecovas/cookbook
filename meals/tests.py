@@ -9,8 +9,16 @@ from django.contrib.staticfiles import finders
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from .aggregation import aggregate
-from .models import CookingDay, Extra, Ingredient, PlanEntry, Recipe, UserSetting
+from .aggregation import aggregate, split_staples
+from .models import (
+    CookingDay,
+    Extra,
+    Ingredient,
+    PlanEntry,
+    Recipe,
+    Staple,
+    UserSetting,
+)
 
 
 class AggregationTests(SimpleTestCase):
@@ -104,6 +112,62 @@ class AggregationTests(SimpleTestCase):
         self.assertEqual(lines[0].quantity, 3)
 
 
+class SplitStaplesTests(SimpleTestCase):
+    """split_staples: partition aggregated lines into to-buy and assumed."""
+
+    def lines(self, *rows):
+        return aggregate(list(rows))
+
+    def test_staple_lines_skipped_case_insensitively(self):
+        lines = self.lines(
+            ("Salt", 1, "pinch", "Soup"),
+            ("Butter", 200, "g", "Cookies"),
+        )
+        to_buy, assumed = split_staples(lines, ["SALT"])
+        self.assertEqual([line.name for line in to_buy], ["Butter"])
+        self.assertEqual(assumed, ["Salt"])
+
+    def test_staple_skips_every_unit_variant_of_the_name(self):
+        # Incompatible units keep Flour on two lines; the staple hides both.
+        lines = self.lines(
+            ("Flour", 200, "g", "Bread"),
+            ("Flour", 1, "cup", "Cookies"),
+            ("Milk", 1, "l", "Pancakes"),
+        )
+        to_buy, assumed = split_staples(lines, ["flour"])
+        self.assertEqual([line.name for line in to_buy], ["Milk"])
+        self.assertEqual(assumed, ["Flour"])  # disclosed once, not twice
+
+    def test_empty_staples_leaves_lines_unchanged(self):
+        lines = self.lines(
+            ("Salt", 1, "pinch", "Soup"),
+            ("Butter", 200, "g", "Cookies"),
+        )
+        to_buy, assumed = split_staples(lines, [])
+        self.assertEqual(to_buy, lines)
+        self.assertEqual(assumed, [])
+
+    def test_unmatched_staples_are_not_disclosed(self):
+        lines = self.lines(("Butter", 200, "g", "Cookies"))
+        to_buy, assumed = split_staples(lines, ["saffron"])
+        self.assertEqual([line.name for line in to_buy], ["Butter"])
+        self.assertEqual(assumed, [])
+
+    def test_staple_names_are_normalized_before_matching(self):
+        lines = self.lines(("Olive Oil", 30, "ml", "Salad"))
+        to_buy, assumed = split_staples(lines, ["  olive OIL  "])
+        self.assertEqual(to_buy, [])
+        self.assertEqual(assumed, ["Olive Oil"])  # line casing, not staple's
+
+    def test_assumed_names_sorted_alphabetically(self):
+        lines = self.lines(
+            ("salt", 1, "pinch", "Soup"),
+            ("Olive Oil", 30, "ml", "Salad"),
+        )
+        _, assumed = split_staples(lines, ["salt", "olive oil"])
+        self.assertEqual(assumed, ["Olive Oil", "salt"])
+
+
 class AuthTests(TestCase):
     """Every meals URL requires login; login and logout flows work."""
 
@@ -125,6 +189,8 @@ class AuthTests(TestCase):
             (reverse("add_extra"), ["get", "post"]),
             (reverse("remove_extra", args=[1]), ["get", "post"]),
             (reverse("clear_plan"), ["get", "post"]),
+            (reverse("add_staple"), ["get", "post"]),
+            (reverse("remove_staple", args=[1]), ["get", "post"]),
             (reverse("toggle_cooking_day"), ["get", "post"]),
             (reverse("settings"), ["get", "post"]),
         ]
@@ -371,6 +437,114 @@ class ExtraTests(TestCase):
         self.assertContains(response, f'action="{reverse("add_extra")}"')
         # The empty state still appears when no meals are selected.
         self.assertContains(response, "No meals selected yet")
+
+
+class StapleTests(TestCase):
+    """Staples: shared always-at-home ingredient names (see GLOSSARY.md)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("partner", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def plan_recipe_with(self, *ingredient_rows):
+        recipe = Recipe.objects.create(name="Soup")
+        for name, quantity, unit in ingredient_rows:
+            Ingredient.objects.create(
+                recipe=recipe, name=name, quantity=quantity, unit=unit
+            )
+        PlanEntry.objects.create(recipe=recipe)
+        return recipe
+
+    # ----- add / remove views -----
+
+    def test_add_staple_and_redirect_to_settings(self):
+        response = self.client.post(reverse("add_staple"), {"name": "Salt"})
+        self.assertRedirects(response, reverse("settings"))
+        self.assertEqual(
+            list(Staple.objects.values_list("name", flat=True)), ["Salt"]
+        )
+
+    def test_add_strips_surrounding_whitespace(self):
+        self.client.post(reverse("add_staple"), {"name": "  Olive oil  "})
+        self.assertEqual(Staple.objects.get().name, "Olive oil")
+
+    def test_add_rejects_empty_and_whitespace_names_silently(self):
+        for name in ("", "   "):
+            with self.subTest(name=repr(name)):
+                response = self.client.post(reverse("add_staple"), {"name": name})
+                self.assertRedirects(response, reverse("settings"))
+        self.assertEqual(Staple.objects.count(), 0)
+
+    def test_duplicate_add_is_a_silent_noop_case_insensitively(self):
+        Staple.objects.create(name="Salt")
+        for name in ("Salt", "salt", "  SALT "):
+            with self.subTest(name=name):
+                response = self.client.post(
+                    reverse("add_staple"), {"name": name}, follow=True
+                )
+                self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(Staple.objects.values_list("name", flat=True)), ["Salt"]
+        )
+
+    def test_remove_staple(self):
+        staple = Staple.objects.create(name="Salt")
+        response = self.client.post(reverse("remove_staple", args=[staple.pk]))
+        self.assertRedirects(response, reverse("settings"))
+        self.assertEqual(Staple.objects.count(), 0)
+
+    # ----- Settings page -----
+
+    def test_settings_page_lists_staples_with_remove_and_add_controls(self):
+        staple = Staple.objects.create(name="Olive oil")
+        response = self.client.get(reverse("settings"))
+        self.assertContains(response, "Olive oil")
+        self.assertContains(
+            response, f'action="{reverse("remove_staple", args=[staple.pk])}"'
+        )
+        self.assertContains(response, f'action="{reverse("add_staple")}"')
+
+    def test_staples_shared_with_the_other_partner(self):
+        Staple.objects.create(name="Pepper")
+        other = User.objects.create_user("other-partner", password="test-pass-456")
+        self.client.force_login(other)
+        response = self.client.get(reverse("settings"))
+        self.assertContains(response, "Pepper")
+
+    # ----- Shopping List filtering and disclosure -----
+
+    def test_shopping_list_excludes_staples_and_discloses_them(self):
+        self.plan_recipe_with(("Salt", 1, "pinch"), ("Butter", 200, "g"))
+        Staple.objects.create(name="salt")
+        response = self.client.get(reverse("shopping_list"))
+        self.assertNotContains(response, 'item-name">Salt')
+        self.assertContains(response, 'item-name">Butter')
+        self.assertContains(response, "Assumed you have")
+        self.assertContains(response, "Salt")
+
+    def test_shopping_list_without_staples_has_no_disclosure(self):
+        self.plan_recipe_with(("Salt", 1, "pinch"))
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, 'item-name">Salt')
+        self.assertNotContains(response, "Assumed you have")
+
+    def test_unmatched_staple_is_not_disclosed(self):
+        self.plan_recipe_with(("Butter", 200, "g"))
+        Staple.objects.create(name="saffron")
+        response = self.client.get(reverse("shopping_list"))
+        self.assertNotContains(response, "Assumed you have")
+
+    def test_staple_does_not_hide_a_matching_extra(self):
+        Staple.objects.create(name="Olive oil")
+        Extra.objects.create(name="Olive oil")
+        response = self.client.get(reverse("shopping_list"))
+        self.assertContains(response, 'item-name">Olive oil')
+
+    def test_clear_plan_keeps_staples(self):
+        self.plan_recipe_with(("Salt", 1, "pinch"))
+        Staple.objects.create(name="Salt")
+        self.client.post(reverse("clear_plan"))
+        self.assertEqual(Staple.objects.count(), 1)
 
 
 class ThemeSettingsTests(TestCase):

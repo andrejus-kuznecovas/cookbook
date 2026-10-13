@@ -16,6 +16,12 @@ urlpatterns = [
         name="remove_extra",
     ),
     path("settings/", views.user_settings, name="settings"),
+    path("settings/staples/add/", views.add_staple, name="add_staple"),
+    path(
+        "settings/staples/<int:pk>/remove/",
+        views.remove_staple,
+        name="remove_staple",
+    ),
     path("clear-plan/", views.clear_plan, name="clear_plan"),
     path(
         "cooking-days/toggle/",

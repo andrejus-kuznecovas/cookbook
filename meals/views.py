@@ -8,13 +8,14 @@ from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .aggregation import aggregate
+from .aggregation import aggregate, split_staples
 from .models import (
     CookingDay,
     Extra,
     Ingredient,
     PlanEntry,
     Recipe,
+    Staple,
     Theme,
     Unit,
     UserSetting,
@@ -244,11 +245,16 @@ def shopping_list(request):
     ingredients = Ingredient.objects.filter(
         recipe__in=planned_recipes
     ).select_related("recipe")
+    # Staples only filter recipe-derived lines; Extras are explicit
+    # requests and are never filtered.
+    staple_names = Staple.objects.values_list("name", flat=True)
+    lines, assumed_staples = split_staples(aggregate(ingredients), staple_names)
     return render(
         request,
         "meals/shopping_list.html",
         {
-            "lines": aggregate(ingredients),
+            "lines": lines,
+            "assumed_staples": assumed_staples,
             "planned_recipes": planned_recipes,
             "extras": Extra.objects.all(),
         },
@@ -272,6 +278,23 @@ def remove_extra(request, pk):
 
 
 @login_required
+@require_POST
+def add_staple(request):
+    name = request.POST.get("name", "").strip()
+    # Duplicate names (case-insensitive) are a silent no-op.
+    if name and not Staple.objects.filter(name__iexact=name).exists():
+        Staple.objects.create(name=name)
+    return redirect("settings")
+
+
+@login_required
+@require_POST
+def remove_staple(request, pk):
+    get_object_or_404(Staple, pk=pk).delete()
+    return redirect("settings")
+
+
+@login_required
 def user_settings(request):
     if request.method == "POST":
         choice = request.POST.get("theme", "")
@@ -288,7 +311,11 @@ def user_settings(request):
     return render(
         request,
         "meals/settings.html",
-        {"current_theme": current, "themes": Theme.choices},
+        {
+            "current_theme": current,
+            "themes": Theme.choices,
+            "staples": Staple.objects.all(),
+        },
     )
 
 
