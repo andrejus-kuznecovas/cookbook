@@ -10,7 +10,7 @@
   For {% for r in planned_recipes %}<strong>{{ r.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
 </p>
 
-<p class="progress-note" id="progress-note"></p>
+<p class="progress-note" id="progress-note" aria-live="polite"></p>
 
 <div class="shop-card" id="shop-card">
   {% for line in lines %}
